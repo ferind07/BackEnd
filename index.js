@@ -12,19 +12,29 @@ const socket = require("socket.io");
 const req = require("express/lib/request");
 const io = socket(server);
 
-const users = {};
+const users = [];
 
 io.on('connection', socket => {
+  
   if (!users[socket.id]) {
-      users[socket.id] = socket.id;
+    users.push(socket.id)
   }
+  console.log(users);
 
   socket.emit("yourID", socket.id);
 
   io.sockets.emit("allUsers", users);
 
   socket.on('disconnect', () => {
-      delete users[socket.id];
+    const id = socket.id;
+    for (let index = 0; index < users.length; index++) {
+      const element = users[index];
+      if (element === id){
+        users.splice(index, 1);
+      }
+    }
+    io.emit("allUsers", users);
+    console.log(users);
   })
 
   socket.on("callUser", (data) => {
