@@ -27,6 +27,10 @@ io.on('connection', socket => {
   })
 });
 
+app.get("/", (req, res) => {
+  res.send("hello world");
+})
+
 server.listen(8000, () => {
   console.log("server run...");
 });
