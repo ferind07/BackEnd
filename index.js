@@ -1,5 +1,13 @@
 const express = require("express");
+const bodyParser = require("body-parser");
+
 const app = express();
+//app.use(express.static(__dirname + '/public'))
+app.use(bodyParser.urlencoded({ extended:true }));
+
+app.get("/coba", (req, res) => {
+  res.send("hello world");
+})
 
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
@@ -26,10 +34,6 @@ io.on('connection', socket => {
     io.to(data.to).emit('callAccepted', data.signal);
   })
 });
-
-app.get("/", (req, res) => {
-  res.send("hello world");
-})
 
 server.listen(8000, () => {
   console.log("server run...");
