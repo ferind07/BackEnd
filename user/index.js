@@ -65,7 +65,9 @@ router.post("/login", async (req, res) => {
           },
           "217116596"
         );
-        res.status(200).send({ msg: "Success login", token: token });
+        res
+          .status(200)
+          .send({ msg: "Success login", token: token, role: data.role });
       } else {
         res.status(201).send({ msg: "User banned" });
       }
