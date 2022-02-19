@@ -9,8 +9,10 @@ app.use(bodyParser.json());
 app.use("/public", express.static("public"));
 
 var userRoutes = require("./user/index");
+var adminRoutes = require("./admin/index");
 
 app.use("/user", userRoutes);
+app.use("/admin", adminRoutes);
 
 app.get("/coba", (req, res) => {
   res.send("hello world");
