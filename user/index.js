@@ -60,14 +60,23 @@ router.post("/login", async (req, res) => {
             email: data.email,
             name: data.name,
             phoneNumber: data.phoneNumber,
-            saldo: data.saldo,
             role: data.role,
+            saldo: data.saldo,
+            status: data.status,
+            image: data.image,
           },
-          "217116596"
+
+          "217116596",
+          {
+            expiresIn: "2d",
+          }
         );
-        res
-          .status(200)
-          .send({ msg: "Success login", token: token, role: data.role });
+        res.status(200).send({
+          msg: "Success login",
+          token: token,
+          role: data.role,
+          status: data.status,
+        });
       } else {
         res.status(201).send({ msg: "User banned" });
       }
@@ -110,6 +119,17 @@ router.post("/register", async (req, res) => {
       });
     }
   });
+});
+
+router.get("/getInfo", (req, res) => {
+  const token = req.query.token;
+  //console.log(token);
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    res.send(decoded);
+  } catch (err) {
+    res.send(err);
+  }
 });
 
 module.exports = router;
