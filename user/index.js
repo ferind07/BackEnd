@@ -58,12 +58,6 @@ router.post("/login", async (req, res) => {
           {
             id: data.id,
             email: data.email,
-            name: data.name,
-            phoneNumber: data.phoneNumber,
-            role: data.role,
-            saldo: data.saldo,
-            status: data.status,
-            image: data.image,
           },
 
           "217116596",
@@ -126,10 +120,18 @@ router.get("/getInfo", (req, res) => {
   //console.log(token);
   try {
     var decoded = jwt.verify(token, "217116596");
-    res.send(decoded);
+    const q = `select email, name, phoneNumber, role, saldo, status, image from user where id=${decoded.id}`;
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows[0]);
+    });
   } catch (err) {
     res.send(err);
   }
 });
+
+router.post("/updateUser", (req, res) => {});
+
+router.post("/addClass", (req, res) => {});
 
 module.exports = router;
