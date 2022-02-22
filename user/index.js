@@ -130,6 +130,22 @@ router.get("/getInfo", (req, res) => {
   }
 });
 
+router.get("/getInstructorInfo", (req, res) => {
+  const token = req.query.token;
+  //console.log(token);
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select * from instructor where idUser=${decoded.id}`;
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      console.log(rows[0]);
+      res.send(rows[0]);
+    });
+  } catch (err) {
+    res.send(err);
+  }
+});
+
 router.post("/updateUser", (req, res) => {});
 
 router.post("/addClass", (req, res) => {});
