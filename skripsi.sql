@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 22, 2022 at 05:24 PM
+-- Generation Time: Feb 22, 2022 at 05:30 PM
 -- Server version: 10.4.14-MariaDB
 -- PHP Version: 7.2.34
 
@@ -29,6 +29,7 @@ USE `skripsi`;
 -- Table structure for table `instructor`
 --
 
+DROP TABLE IF EXISTS `instructor`;
 CREATE TABLE `instructor` (
   `idUser` int(11) NOT NULL,
   `katagori` int(11) NOT NULL,
@@ -42,6 +43,7 @@ CREATE TABLE `instructor` (
 -- Table structure for table `user`
 --
 
+DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `id` int(11) NOT NULL,
   `email` varchar(255) NOT NULL,
