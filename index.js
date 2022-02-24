@@ -6,6 +6,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
 app.use("/public", express.static("public"));
 
 var userRoutes = require("./user/index");

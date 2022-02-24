@@ -6,10 +6,26 @@ var SHA256 = require("crypto-js/sha256");
 const fs = require("fs");
 const { promisify } = require("util");
 const readFile = promisify(fs.readFile);
-
+const multer = require("multer");
+const path = require("path");
 const nodeMailer = require("nodemailer");
-
 var jwt = require("jsonwebtoken");
+
+const diskStorageBerkas = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "../public/uploads/berkas"));
+  },
+  filename: function (req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
+  },
+});
+
+const uploadBerkas = multer({
+  storage: diskStorageBerkas,
+}).single("berkas");
 
 router.get("/", (req, res) => {
   res.send("hello user");
@@ -58,6 +74,7 @@ router.post("/login", async (req, res) => {
           {
             id: data.id,
             email: data.email,
+            role: data.role,
           },
 
           "217116596",
@@ -144,6 +161,41 @@ router.get("/getInstructorInfo", (req, res) => {
   } catch (err) {
     res.send(err);
   }
+});
+
+router.post("/registerInstructor", uploadBerkas, (req, res) => {
+  const token = req.body.token;
+  const katagori = req.body.katagori;
+
+  try {
+    const file = req.file;
+    const lokasi = `/public/uploads/berkas/${file.filename}`;
+    var decoded = jwt.verify(token, "217116596");
+    const q = `INSERT INTO instructor (idUser, katagori, valid, berkas) VALUES (${decoded.id}, ${katagori}, 0, '${lokasi}')`;
+    console.log(q);
+    console.log(decoded);
+    con.query(q, (err, rows) => {
+      if (err) console.log(err);
+      if (rows.affectedRows == 1) {
+        res.status(200).send({
+          status: true,
+          msg: "Success register instructor",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    //res.send(error);
+  }
+});
+
+router.get("/getInstructorList", (req, res) => {
+  const katagori = req.query.katagori;
+  const q = `select u.id, u.email, u.name, u.phoneNumber from user u, instructor i where u.id=i.idUser and valid=1 and role=2 and katagori=${katagori}`;
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
 });
 
 router.post("/updateUser", (req, res) => {});
