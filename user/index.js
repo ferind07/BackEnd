@@ -23,9 +23,25 @@ const diskStorageBerkas = multer.diskStorage({
   },
 });
 
+const diskStorageClassImage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "../public/uploads/classImage"));
+  },
+  filename: function (req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
+  },
+});
+
 const uploadBerkas = multer({
   storage: diskStorageBerkas,
 }).single("berkas");
+
+const uploadClassImage = multer({
+  storage: diskStorageClassImage,
+}).single("classImage");
 
 router.get("/", (req, res) => {
   res.send("hello user");
@@ -155,7 +171,7 @@ router.get("/getInstructorInfo", (req, res) => {
     const q = `select * from instructor where idUser=${decoded.id}`;
     con.query(q, (err, rows) => {
       if (err) throw err;
-      console.log(rows[0]);
+      //console.log(rows[0]);
       res.send(rows[0]);
     });
   } catch (err) {
@@ -200,6 +216,38 @@ router.get("/getInstructorList", (req, res) => {
 
 router.post("/updateUser", (req, res) => {});
 
-router.post("/addClass", (req, res) => {});
+router.post("/addClass", uploadClassImage, (req, res) => {
+  const token = req.body.token;
+  const title = req.body.title;
+  const detail = req.body.detail;
+  const duration = req.body.duration;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    if (decoded.role == 2) {
+      const file = req.file;
+      const lokasi = `/public/uploads/berkas/${file.filename}`;
+      const q = `INSERT INTO class (id, idInstructor, title, detail, duration, image) VALUES (NULL, ${decoded.id}, '${title}', '${detail}', ${duration}, '${lokasi}')`;
+
+      con.query(q, (err, rows) => {
+        if (err) console.log(err);
+        if (rows.affectedRows == 1) {
+          res.status(200).send({
+            status: true,
+            msg: "Success add class",
+          });
+        }
+      });
+    } else {
+      res.status(200).send({
+        status: false,
+        msg: "Only for Instructor",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    //res.send(error);
+  }
+});
 
 module.exports = router;
