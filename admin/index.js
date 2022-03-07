@@ -4,7 +4,7 @@ const con = require("../skripsi_db_connection");
 var jwt = require("jsonwebtoken");
 
 router.get("/allUser", (req, res) => {
-  const q = `select email, name, phoneNumber, role, saldo, status from user where role != 3`;
+  const q = `select id, email, name, phoneNumber, role, saldo, status from user where role != 3`;
   con.query(q, (err, rows) => {
     if (err) throw err;
     res.status(200).send(rows);
@@ -42,14 +42,15 @@ router.get("/getUnApprovedInstructor", (req, res) => {
 });
 
 router.post("/banUser", (req, res) => {
-  const idUser = req.query.id;
-  const status = req.query.status;
-  const q = "";
+  const idUser = req.body.id;
+  const status = req.body.status;
+  let q = "";
   if (status == 1) {
     q = `update user set status=0 where id=${idUser}`;
   } else {
     q = `update user set status=1 where id=${idUser}`;
   }
+  //console.log(q);
   con.query(q, (err, rows) => {
     if (err) throw err;
     if (rows.affectedRows == 1) {
@@ -58,7 +59,6 @@ router.post("/banUser", (req, res) => {
       });
     }
   });
-  res.send(idUser);
 });
 
 router.post("/approveInstructor", (req, res) => {

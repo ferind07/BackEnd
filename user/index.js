@@ -23,6 +23,18 @@ const diskStorageBerkas = multer.diskStorage({
   },
 });
 
+const diskStorageUserProfile = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "../public/uploads/userProfile"));
+  },
+  filename: function (req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
+  },
+});
+
 const diskStorageClassImage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, path.join(__dirname, "../public/uploads/classImage"));
@@ -42,6 +54,10 @@ const uploadBerkas = multer({
 const uploadClassImage = multer({
   storage: diskStorageClassImage,
 }).single("classImage");
+
+const uploadUserProfile = multer({
+  storage: diskStorageUserProfile,
+}).single("userProfile");
 
 router.get("/", (req, res) => {
   res.send("hello user");
@@ -179,6 +195,16 @@ router.get("/getInstructorInfo", (req, res) => {
   }
 });
 
+router.get("/getInstructorDetail", (req, res) => {
+  const id = req.query.id;
+  const q = `select u.name, u.phoneNumber, u.image, i.berkas, i.instructorDetail from instructor i, user u where i.idUser=u.id and u.id=${id}`;
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    //console.log(rows[0]);
+    res.send(rows[0]);
+  });
+});
+
 router.post("/registerInstructor", uploadBerkas, (req, res) => {
   const token = req.body.token;
   const katagori = req.body.katagori;
@@ -207,27 +233,66 @@ router.post("/registerInstructor", uploadBerkas, (req, res) => {
 
 router.get("/getInstructorList", (req, res) => {
   const katagori = req.query.katagori;
-  const q = `select u.id, u.email, u.name, u.phoneNumber from user u, instructor i where u.id=i.idUser and valid=1 and role=2 and katagori=${katagori}`;
+  const q = `select u.id, u.email, u.name, u.phoneNumber, u.image from user u, instructor i where u.id=i.idUser and valid=1 and role=2 and katagori=${katagori}`;
+  //console.log(q);
   con.query(q, (err, rows) => {
     if (err) throw err;
+    console.log(rows);
     res.send(rows);
   });
 });
 
-router.post("/updateUser", (req, res) => {});
+router.post("/updateUser", uploadUserProfile, (req, res) => {
+  const token = req.body.token;
+  const name = req.body.name;
+  const phone = req.body.phoneNumber;
+  const file = req.file;
+  //console.log(token);
+  if (file) {
+    //ada gambar
+
+    try {
+      var decoded = jwt.verify(token, "217116596");
+      const lokasi = `/public/uploads/userProfile/${file.filename}`;
+      const q = `update user set name='${name}', phoneNumber='${phone}', image='${lokasi}' where id=${decoded.id}`;
+      con.query(q, (err, rows) => {
+        if (err) throw err;
+        res.send(rows);
+      });
+    } catch (error) {
+      console.log(error);
+      res.send(error);
+    }
+  } else {
+    //tidak ada gambar
+    try {
+      var decoded = jwt.verify(token, "217116596");
+
+      const q = `update user set name='${name}', phoneNumber='${phone}', image='' where id=${decoded.id}`;
+      con.query(q, (err, rows) => {
+        if (err) throw err;
+        res.send(rows);
+      });
+    } catch (error) {
+      console.log(error);
+      res.send(error);
+    }
+  }
+});
 
 router.post("/addClass", uploadClassImage, (req, res) => {
   const token = req.body.token;
   const title = req.body.title;
   const detail = req.body.detail;
   const duration = req.body.duration;
+  const price = req.body.price;
 
   try {
     var decoded = jwt.verify(token, "217116596");
     if (decoded.role == 2) {
       const file = req.file;
-      const lokasi = `/public/uploads/berkas/${file.filename}`;
-      const q = `INSERT INTO class (id, idInstructor, title, detail, duration, image) VALUES (NULL, ${decoded.id}, '${title}', '${detail}', ${duration}, '${lokasi}')`;
+      const lokasi = `/public/uploads/classImage/${file.filename}`;
+      const q = `INSERT INTO class (id, idInstructor, title, detail, duration, price, image) VALUES (NULL, ${decoded.id}, '${title}', '${detail}', ${duration}, ${price}, '${lokasi}')`;
 
       con.query(q, (err, rows) => {
         if (err) console.log(err);
@@ -247,6 +312,147 @@ router.post("/addClass", uploadClassImage, (req, res) => {
   } catch (error) {
     console.log(error);
     //res.send(error);
+  }
+});
+
+router.get("/getClassList", (req, res) => {
+  const token = req.query.token;
+  if (token) {
+    //ada token
+    //berguna untuk me load class yang sudah terdaftar (fitur instructor)
+    try {
+      var decoded = jwt.verify(token, "217116596");
+      if (decoded.role == 2) {
+        const q = `select * from class where idInstructor=${decoded.id}`;
+        con.query(q, (err, rows) => {
+          if (err) throw err;
+          res.send({
+            status: true,
+            rows: rows,
+          });
+        });
+      } else {
+        res.send({
+          status: false,
+          msg: "Not Instructor",
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      res.send(error);
+    }
+  } else {
+    //tidak ada token
+    //berguna untuk load class oleh user
+    const idInstructor = req.query.idInstructor;
+    const q = `select * from class where idInstructor=${idInstructor}`;
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send({
+        status: true,
+        rows: rows,
+      });
+    });
+  }
+});
+
+router.get("/getClassDetail", (req, res) => {
+  const id = req.query.id;
+  const q = `select * from class where id=${id}`;
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows[0]);
+  });
+});
+
+router.post("/registerClass", (req, res) => {
+  const token = req.body.token;
+  const duration = req.body.duration;
+  const dateStart = req.body.dateStart;
+  const dateEnd = req.body.dateEnd;
+  const idClass = req.body.idClass;
+
+  try {
+    const decoded = jwt.verify(token, "217116596");
+    const idUser = decoded.id;
+    const q = `INSERT INTO schedule (id, idUser, idClass, duration, dateStart, dateEnd) VALUES (NULL, ${idUser}, ${idClass}, ${duration}, '${dateStart}', '${dateEnd}')`;
+    con.query(q, (err, rows) => {
+      if (err) console.log(err);
+      if (rows.affectedRows == 1) {
+        res.status(200).send({
+          status: true,
+          msg: "Success register class",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    res.send(error);
+  }
+});
+
+async function checkSubmission(idUser, idInstructor, dateStart, dateEnd) {
+  const q =
+    `select * from submission where (dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}') and ` +
+    `(dateStart >= '${dateStart}' and dateEnd >= '${dateEnd}') and ` +
+    `(dateStart <= '${dateStart}' and dateEnd <= '${dateEnd}') and ` +
+    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}');`;
+  console.log(q);
+}
+
+router.post("/submissionClass", (req, res) => {
+  const token = req.body.token;
+  const idClass = req.body.idClass;
+  const idInstructor = req.body.idInstructor;
+  const dateStart = req.body.dateStart;
+  const dateEnd = req.body.dateEnd;
+
+  try {
+    const decoded = jwt.verify(token, "217116596");
+    const idUser = decoded.id;
+    checkSubmission(idUser, idInstructor, dateStart, dateEnd);
+    const q = `INSERT INTO submission (id, idUser, idInstructor, idClass, dateStart, dateEnd) VALUES (NULL, ${idUser}, ${idInstructor}, ${idClass}, '${dateStart}', '${dateEnd}')`;
+    con.query(q, (err, rows) => {
+      if (err) console.log(err);
+      if (rows.affectedRows == 1) {
+        res.status(200).send({
+          status: true,
+          msg: "Success submit class",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    res.send(error);
+  }
+});
+
+router.get("/getSubmission", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    const decoded = jwt.verify(token, "217116596");
+    const q =
+      `select s.id, c.title, u.name, s.dateStart, s.dateEnd ` +
+      `from submission s, user u, class c ` +
+      `where s.idInstructor=${decoded.id} and u.id=s.idUser and s.idClass=c.id`;
+    con.query(q, (err, rows) => {
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+    res.send(error);
+  }
+});
+
+router.post("/subMission", (req, res) => {
+  const token = req.query.token;
+  try {
+    const decoded = jwt.verify(token, "217116596");
+    const q = ``;
+  } catch (error) {
+    console.log(error);
+    res.send(error);
   }
 });
 
