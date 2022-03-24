@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Mar 07, 2022 at 03:17 PM
+-- Generation Time: Mar 24, 2022 at 06:05 AM
 -- Server version: 10.4.21-MariaDB
 -- PHP Version: 8.1.2
 
@@ -37,15 +37,34 @@ CREATE TABLE `class` (
   `detail` text NOT NULL,
   `duration` int(11) NOT NULL,
   `price` int(11) NOT NULL,
-  `image` varchar(100) NOT NULL
+  `image` varchar(100) NOT NULL,
+  `classCount` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `class`
 --
 
-INSERT INTO `class` (`id`, `idInstructor`, `title`, `detail`, `duration`, `price`, `image`) VALUES
-(3, 33, 'html & css', '<p>html &amp; css course</p>', 100, 100000, '/public/uploads/classImage/classImage-1646001497490.jpeg');
+INSERT INTO `class` (`id`, `idInstructor`, `title`, `detail`, `duration`, `price`, `image`, `classCount`) VALUES
+(3, 33, 'html & css', '<p>html &amp; css course</p>', 100, 100000, '/public/uploads/classImage/classImage-1646001497490.jpeg', 1),
+(4, 33, 'WebRTC', '<p>webRTC class</p><p><strong>Real Time Commuication</strong></p><p><strong><span class=\"ql-cursor\">﻿</span></strong></p>', 60, 50000, '/public/uploads/classImage/classImage-1646760719242.jpeg', 2);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `hSubmission`
+--
+
+DROP TABLE IF EXISTS `hSubmission`;
+CREATE TABLE `hSubmission` (
+  `id` int(11) NOT NULL,
+  `idUser` int(11) NOT NULL,
+  `idInstructor` int(11) NOT NULL,
+  `idClass` int(11) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT 0,
+  `timeInsert` datetime NOT NULL DEFAULT current_timestamp(),
+  `timeUpdate` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -55,7 +74,9 @@ INSERT INTO `class` (`id`, `idInstructor`, `title`, `detail`, `duration`, `price
 
 DROP TABLE IF EXISTS `instructor`;
 CREATE TABLE `instructor` (
+  `id` int(11) NOT NULL,
   `idUser` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
   `instructorDetail` varchar(50) NOT NULL,
   `katagori` int(11) NOT NULL,
   `valid` int(11) NOT NULL,
@@ -66,8 +87,8 @@ CREATE TABLE `instructor` (
 -- Dumping data for table `instructor`
 --
 
-INSERT INTO `instructor` (`idUser`, `instructorDetail`, `katagori`, `valid`, `berkas`) VALUES
-(33, '', 1, 1, '/public/uploads/berkas/berkas-1645713171115.pdf');
+INSERT INTO `instructor` (`id`, `idUser`, `name`, `instructorDetail`, `katagori`, `valid`, `berkas`) VALUES
+(1, 33, 'agus', '', 1, 1, '/public/uploads/berkas/berkas-1645713171115.pdf');
 
 -- --------------------------------------------------------
 
@@ -88,56 +109,21 @@ CREATE TABLE `review` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `schedule`
---
-
-DROP TABLE IF EXISTS `schedule`;
-CREATE TABLE `schedule` (
-  `id` int(11) NOT NULL,
-  `idUser` int(11) NOT NULL,
-  `idClass` int(11) NOT NULL,
-  `duration` int(11) NOT NULL,
-  `dateStart` datetime NOT NULL,
-  `dateEnd` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
---
--- Dumping data for table `schedule`
---
-
-INSERT INTO `schedule` (`id`, `idUser`, `idClass`, `duration`, `dateStart`, `dateEnd`) VALUES
-(1, 31, 3, 100, '2022-03-09 11:15:00', '2022-03-09 12:55:00');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `submission`
 --
 
 DROP TABLE IF EXISTS `submission`;
 CREATE TABLE `submission` (
   `id` int(11) NOT NULL,
+  `idHsubmission` int(11) NOT NULL,
   `idUser` int(11) NOT NULL,
   `idInstructor` int(11) NOT NULL,
   `idClass` int(11) NOT NULL,
   `dateStart` datetime NOT NULL,
   `dateEnd` datetime NOT NULL,
-  `status` int(11) NOT NULL DEFAULT 0
+  `status` int(11) NOT NULL DEFAULT 0,
+  `notif` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
---
--- Dumping data for table `submission`
---
-
-INSERT INTO `submission` (`id`, `idUser`, `idInstructor`, `idClass`, `dateStart`, `dateEnd`, `status`) VALUES
-(1, 31, 33, 3, '2022-03-09 11:15:00', '2022-03-09 12:55:00', 0),
-(2, 32, 33, 3, '2022-03-06 13:00:00', '2022-03-06 14:40:00', 0),
-(3, 32, 33, 3, '2022-03-07 13:00:00', '2022-03-07 14:40:00', 0),
-(4, 32, 33, 3, '2022-03-08 13:00:00', '2022-03-08 14:40:00', 0),
-(5, 31, 33, 3, '2022-03-06 12:30:00', '2022-03-06 14:10:00', 0),
-(6, 31, 33, 3, '2022-03-06 14:10:00', '2022-03-06 15:50:00', 0),
-(7, 31, 33, 3, '2022-03-06 14:10:00', '2022-03-06 15:50:00', 0),
-(8, 31, 33, 3, '2022-03-06 14:20:00', '2022-03-06 16:00:00', 0);
 
 -- --------------------------------------------------------
 
@@ -180,21 +166,22 @@ ALTER TABLE `class`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `hSubmission`
+--
+ALTER TABLE `hSubmission`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `instructor`
 --
 ALTER TABLE `instructor`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `FK_idUser` (`idUser`);
 
 --
 -- Indexes for table `review`
 --
 ALTER TABLE `review`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `schedule`
---
-ALTER TABLE `schedule`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -217,7 +204,19 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `class`
 --
 ALTER TABLE `class`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `hSubmission`
+--
+ALTER TABLE `hSubmission`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `instructor`
+--
+ALTER TABLE `instructor`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `review`
@@ -226,16 +225,10 @@ ALTER TABLE `review`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `schedule`
---
-ALTER TABLE `schedule`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
 -- AUTO_INCREMENT for table `submission`
 --
 ALTER TABLE `submission`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `user`

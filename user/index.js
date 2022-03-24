@@ -10,6 +10,7 @@ const multer = require("multer");
 const path = require("path");
 const nodeMailer = require("nodemailer");
 var jwt = require("jsonwebtoken");
+const util = require("util");
 
 const diskStorageBerkas = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -109,14 +110,12 @@ router.post("/login", async (req, res) => {
             role: data.role,
           },
 
-          "217116596",
-          {
-            expiresIn: "2d",
-          }
+          "217116596"
         );
         res.status(200).send({
           msg: "Success login",
           token: token,
+          id: data.id,
           role: data.role,
           status: data.status,
         });
@@ -137,7 +136,7 @@ router.post("/register", async (req, res) => {
   const q = `select * from user where email='${email}'`;
   con.query(q, (err, rows) => {
     if (err) throw err;
-    console.log(rows.length);
+    //console.log(rows.length);
     if (rows.length == 0) {
       const hash = SHA256(password).toString();
       const q =
@@ -213,9 +212,9 @@ router.post("/registerInstructor", uploadBerkas, (req, res) => {
     const file = req.file;
     const lokasi = `/public/uploads/berkas/${file.filename}`;
     var decoded = jwt.verify(token, "217116596");
-    const q = `INSERT INTO instructor (idUser, katagori, valid, berkas) VALUES (${decoded.id}, ${katagori}, 0, '${lokasi}')`;
-    console.log(q);
-    console.log(decoded);
+    const q = `INSERT INTO instructor (idUser, name, katagori, valid, berkas) VALUES (${decoded.id}, '${decoded.name}', ${katagori}, 0, '${lokasi}')`;
+    //console.log(q);
+    //console.log(decoded);
     con.query(q, (err, rows) => {
       if (err) console.log(err);
       if (rows.affectedRows == 1) {
@@ -237,7 +236,7 @@ router.get("/getInstructorList", (req, res) => {
   //console.log(q);
   con.query(q, (err, rows) => {
     if (err) throw err;
-    console.log(rows);
+    //console.log(rows);
     res.send(rows);
   });
 });
@@ -286,13 +285,14 @@ router.post("/addClass", uploadClassImage, (req, res) => {
   const detail = req.body.detail;
   const duration = req.body.duration;
   const price = req.body.price;
+  const classCount = req.body.classCount;
 
   try {
     var decoded = jwt.verify(token, "217116596");
     if (decoded.role == 2) {
       const file = req.file;
       const lokasi = `/public/uploads/classImage/${file.filename}`;
-      const q = `INSERT INTO class (id, idInstructor, title, detail, duration, price, image) VALUES (NULL, ${decoded.id}, '${title}', '${detail}', ${duration}, ${price}, '${lokasi}')`;
+      const q = `INSERT INTO class (id, idInstructor, title, detail, duration, price, image, classCount) VALUES (NULL, ${decoded.id}, '${title}', '${detail}', ${duration}, ${price}, '${lokasi}', ${classCount})`;
 
       con.query(q, (err, rows) => {
         if (err) console.log(err);
@@ -392,35 +392,84 @@ router.post("/registerClass", (req, res) => {
 });
 
 async function checkSubmission(idUser, idInstructor, dateStart, dateEnd) {
+  const query = util.promisify(con.query).bind(con);
   const q =
-    `select * from submission where (dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}') and ` +
-    `(dateStart >= '${dateStart}' and dateEnd >= '${dateEnd}') and ` +
-    `(dateStart <= '${dateStart}' and dateEnd <= '${dateEnd}') and ` +
-    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}');`;
-  console.log(q);
+    `select * from submission where ` +
+    `('${dateStart}' between dateStart and dateEnd or ` +
+    `'${dateEnd}' between dateStart and dateEnd or ` +
+    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}')) and (idUser=${idUser} or idInstructor=${idInstructor});`;
+  const hasil = await query(q);
+  return hasil;
 }
 
-router.post("/submissionClass", (req, res) => {
+router.post("/submissionClass", async (req, res) => {
   const token = req.body.token;
   const idClass = req.body.idClass;
   const idInstructor = req.body.idInstructor;
   const dateStart = req.body.dateStart;
   const dateEnd = req.body.dateEnd;
 
+  //res.send({ jml: dateStart.length });
+  //res.send(dateEnd);
+
   try {
     const decoded = jwt.verify(token, "217116596");
     const idUser = decoded.id;
-    checkSubmission(idUser, idInstructor, dateStart, dateEnd);
-    const q = `INSERT INTO submission (id, idUser, idInstructor, idClass, dateStart, dateEnd) VALUES (NULL, ${idUser}, ${idInstructor}, ${idClass}, '${dateStart}', '${dateEnd}')`;
-    con.query(q, (err, rows) => {
-      if (err) console.log(err);
-      if (rows.affectedRows == 1) {
+    let ctr = 0;
+    const query = util.promisify(con.query).bind(con);
+
+    let intersecDate = [];
+
+    for (let index = 0; index < dateStart.length; index++) {
+      intersecDate.push(
+        await checkSubmission(
+          idUser,
+          idInstructor,
+          dateStart[index],
+          dateEnd[index]
+        )
+      );
+    }
+
+    let intersec = false;
+    for (let index = 0; index < intersecDate.length; index++) {
+      const element = intersecDate[index];
+      //console.log(element);
+      if (element.length > 0) {
+        intersec = true;
+      }
+    }
+
+    if (!intersec) {
+      //res.send("tidak ada jadwal menumpuk");
+
+      const qHSubmission = `INSERT INTO hSubmission (id, idUser, idInstructor, idClass, status) VALUES (NULL, ${idUser}, ${idInstructor}, ${idClass}, 0);`;
+
+      const hasilHSubmission = await query(qHSubmission);
+
+      //console.log(hasilHSubmission);
+
+      for (let index = 0; index < dateStart.length; index++) {
+        checkSubmission(idUser, idInstructor, dateStart, dateEnd);
+        const q = `INSERT INTO submission (id, idHSubmission, idUser, idInstructor, idClass, dateStart, dateEnd) VALUES (NULL, ${hasilHSubmission.insertId}, ${idUser}, ${idInstructor}, ${idClass}, '${dateStart[index]}', '${dateEnd[index]}')`;
+        const hasil = await query(q);
+        if (hasil.affectedRows == 1) {
+          ctr++;
+        }
+      }
+      if (ctr == dateStart.length) {
         res.status(200).send({
           status: true,
           msg: "Success submit class",
         });
       }
-    });
+    } else {
+      res.send({
+        status: false,
+        msg: "Ada jadwal yang menumpuk",
+        data: intersecDate,
+      });
+    }
   } catch (error) {
     console.log(error);
     res.send(error);
@@ -429,13 +478,13 @@ router.post("/submissionClass", (req, res) => {
 
 router.get("/getSubmission", (req, res) => {
   const token = req.query.token;
-
+  const id = req.query.id;
   try {
     const decoded = jwt.verify(token, "217116596");
     const q =
       `select s.id, c.title, u.name, s.dateStart, s.dateEnd ` +
       `from submission s, user u, class c ` +
-      `where s.idInstructor=${decoded.id} and u.id=s.idUser and s.idClass=c.id`;
+      `where s.idInstructor=${decoded.id} and u.id=s.idUser and s.idClass=c.id and s.idHsubmission=${id}`;
     con.query(q, (err, rows) => {
       res.send(rows);
     });
@@ -445,14 +494,117 @@ router.get("/getSubmission", (req, res) => {
   }
 });
 
-router.post("/subMission", (req, res) => {
+router.get("/getHSubmission", (req, res) => {
   const token = req.query.token;
+
   try {
     const decoded = jwt.verify(token, "217116596");
-    const q = ``;
+    console.log("id user : " + decoded.id);
+    const q = `select * from hSubmission where idUser=${decoded.id}`;
+    con.query(q, (err, rows) => {
+      res.send(rows);
+    });
   } catch (error) {
     console.log(error);
     res.send(error);
+  }
+});
+
+router.get("/getHSubmissionbyID", (req, res) => {
+  const id = req.query.id;
+
+  try {
+    const q =
+      `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
+      `from hSubmission h, user u, instructor i, class c ` +
+      `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and h.id=${id}`;
+    con.query(q, (err, rows) => {
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+    res.send(error);
+  }
+});
+
+router.post("/actionClass", async (req, res) => {
+  const action = req.body.action;
+  const token = req.body.token;
+  const id = req.body.id;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    if (decoded.role == 2) {
+      let q = `update hSubmission set status=${action} where id=${id}`;
+      const query = util.promisify(con.query).bind(con);
+      let hasil = await query(q);
+      console.log(hasil);
+      if (hasil.affectedRows == 1) {
+        let q2 = `update submission set status=${action} where idHsubmission=${id}`;
+        const query2 = util.promisify(con.query).bind(con);
+        let hasil2 = await query2(q2);
+        //console.log(hasil2);
+        if (hasil2.affectedRows > 0) {
+          res.send({
+            status: true,
+            msg: "success update status",
+          });
+        } else {
+          res.send({
+            status: false,
+            msg: "fail update status",
+          });
+        }
+      }
+    } else {
+      res.send({
+        status: false,
+        msg: "Not Instructor",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/instructorEvent", (req, res) => {
+  const token = req.query.token;
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select u.name, s.dateStart, s.dateEnd, s.status, c.title from submission s, class c, user u where s.idInstructor=${decoded.id} and s.status != 4 and c.id=s.idClass and u.id = s.idUser`;
+    //console.log(q);
+    con.query(q, (err, rows) => {
+      //console.log(rows);
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/getSchedule", (req, res) => {
+  const token = req.query.token;
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    var q = ``;
+    if (decoded.role == 1) {
+      q =
+        `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
+        `from hSubmission h, user u, instructor i, class c ` +
+        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and u.id = ${decoded.id}`;
+    } else {
+      q =
+        `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
+        `from hSubmission h, user u, instructor i, class c ` +
+        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and i.idUser = ${decoded.id}`;
+    }
+    console.log(q);
+    con.query(q, (err, rows) => {
+      if (err) console.log(err);
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
   }
 });
 

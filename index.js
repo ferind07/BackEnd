@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const app = express();
+var jwt = require("jsonwebtoken");
 //app.use(express.static(__dirname + '/public'))
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -11,6 +12,7 @@ app.use("/public", express.static("public"));
 
 var userRoutes = require("./user/index");
 var adminRoutes = require("./admin/index");
+const con = require("./skripsi_db_connection");
 
 app.use("/user", userRoutes);
 app.use("/admin", adminRoutes);
@@ -22,18 +24,124 @@ app.get("/coba", (req, res) => {
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 
+// var CronJob = require("cron").CronJob;
+// var job = new CronJob("* * * * *", function () {
+//   updateHsubmissionExpired();
+//   console.log("run every 1 minute");
+// });
+// job.start();
+
+function updateHsubmissionExpired() {
+  const q = `update hSubmission set status=4 WHERE timeInsert < (NOW() - INTERVAL 1 DAY)`;
+  con.query(q, (err, rows) => {
+    if (err) console.log(err);
+    console.log(rows);
+  });
+}
+
+function notifToUser(socket) {
+  setInterval(() => {
+    const q1 = `select * from submission where notif=0 and status=1 and dateStart between NOW() and (NOW() + INTERVAL 5 MINUTE)`;
+    const q2 = `update submission set notif=1 where notif=0 and status=1 and dateStart between NOW() and (NOW() + INTERVAL 5 MINUTE)`;
+
+    con.query(q1, (err, rows) => {
+      //console.log(rows);
+      if (rows.length > 0) {
+        console.log(rows.length);
+        rows.forEach((element) => {
+          const idUser = element.idUser;
+          const idInstructor = element.idInstructor;
+          if (userData[idUser]) {
+            io.to(userData[idUser]).emit("notif", {
+              message: "ada notifikasi",
+              description: "ini notifikasi",
+            });
+          }
+          if (userData[idInstructor]) {
+            io.to(userData[idInstructor]).emit("notif", {
+              message: "ada notifikasi",
+              description: "ini notifikasi",
+            });
+          }
+        });
+        con.query(q2, (err2, rows2) => {
+          console.log(rows2);
+          if (rows2.affectedRows > 0) {
+            console.log("notif send");
+          }
+        });
+      }
+    });
+
+    console.log("notif user");
+  }, 30000);
+}
+
+app.post("/createRoom", (req, res) => {
+  const idSubmission = req.body.idSubmission;
+  const idUser = req.body.idUser;
+  const token = req.body.token;
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    if (decoded.role == 2) {
+      const idInstructor = token.id;
+      createRoom(idSubmission, idUser, idInstructor);
+      res.send({
+        status: true,
+        msg: "Success create ROOM",
+      });
+    } else {
+      res.send({
+        status: false,
+        msg: "Not instructor",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+function createRoom(id, idUser, idInstructor) {
+  room[id] = {
+    id: [idUser, idInstructor],
+    socketID: [],
+  };
+}
+
 const users = {};
+const userData = {};
+const room = {};
 
 io.on("connection", (socket) => {
   if (!users[socket.id]) {
     users[socket.id] = socket.id;
+    console.log(users);
   }
+
   socket.emit("yourID", socket.id);
   io.sockets.emit("allUsers", users);
 
+  //notifToUser(socket);
+
+  socket.on("login", (data) => {
+    try {
+      var decoded = jwt.verify(data.token, "217116596");
+      users[socket.id] = decoded.id;
+      userData[decoded.id] = socket.id;
+      console.log(userData);
+    } catch (error) {
+      console.log(error);
+    }
+
+    //console.log(users[socket.id]);
+  });
+
   socket.on("disconnect", () => {
+    delete userData[users[socket.id]];
     delete users[socket.id];
+
     console.log(users);
+    console.log(userData);
     io.emit("allUsers", users);
   });
 
