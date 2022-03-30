@@ -13,6 +13,7 @@ app.use("/public", express.static("public"));
 var userRoutes = require("./user/index");
 var adminRoutes = require("./admin/index");
 const con = require("./skripsi_db_connection");
+const e = require("express");
 
 app.use("/user", userRoutes);
 app.use("/admin", adminRoutes);
@@ -84,8 +85,10 @@ app.post("/createRoom", (req, res) => {
   try {
     var decoded = jwt.verify(token, "217116596");
     if (decoded.role == 2) {
-      const idInstructor = token.id;
+      const idInstructor = decoded.id;
+
       createRoom(idSubmission, idUser, idInstructor);
+      console.log(room);
       res.send({
         status: true,
         msg: "Success create ROOM",
@@ -101,9 +104,37 @@ app.post("/createRoom", (req, res) => {
   }
 });
 
+app.post("/joinRoom", (req, res) => {
+  const roomID = req.body.roomID;
+  const token = req.body.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const obj = room[roomID];
+
+    if (obj) {
+      //obj.socketID.push(userData[decoded.id]);
+      console.log(obj);
+      res.send({ status: true, msg: "Join to room" });
+    } else {
+      res.send({ status: false, msg: "Room doesn't created yet" });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 function createRoom(id, idUser, idInstructor) {
+  // room.push({
+  //   id: id,
+  //   idUser: idUser,
+  //   idInstructor: idInstructor,
+  //   socketID: [],
+  // });
   room[id] = {
-    id: [idUser, idInstructor],
+    id: id,
+    idUser: idUser,
+    idInstructor: idInstructor,
     socketID: [],
   };
 }
@@ -122,6 +153,42 @@ io.on("connection", (socket) => {
   io.sockets.emit("allUsers", users);
 
   //notifToUser(socket);
+
+  socket.on("join room", (id) => {
+    console.log("room id : " + id);
+    console.log("socket id : " + socket.id);
+    if (room[id].socketID.length < 2) {
+      const obj = room[id].socketID.find((element) => element == socket.id);
+      if (obj) {
+        //found
+      } else {
+        //not found
+        room[id].socketID.push(socket.id);
+      }
+
+      console.log(room);
+      const usersInThisRoom = room[id].socketID.filter(
+        (id) => id !== socket.id
+      );
+      socket.emit("all users", usersInThisRoom);
+    } else {
+      console.log("room full");
+    }
+  });
+
+  socket.on("sending signal", (payload) => {
+    io.to(payload.userToSignal).emit("user joined", {
+      signal: payload.signal,
+      callerID: payload.callerID,
+    });
+  });
+
+  socket.on("returning signal", (payload) => {
+    io.to(payload.callerID).emit("receiving returned signal", {
+      signal: payload.signal,
+      id: socket.id,
+    });
+  });
 
   socket.on("login", (data) => {
     try {

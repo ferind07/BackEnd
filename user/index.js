@@ -482,7 +482,7 @@ router.get("/getSubmission", (req, res) => {
   try {
     const decoded = jwt.verify(token, "217116596");
     const q =
-      `select s.id, c.title, u.name, s.dateStart, s.dateEnd ` +
+      `select s.id, c.title, u.name, s.dateStart, s.dateEnd, s.idUser ` +
       `from submission s, user u, class c ` +
       `where s.idInstructor=${decoded.id} and u.id=s.idUser and s.idClass=c.id and s.idHsubmission=${id}`;
     con.query(q, (err, rows) => {
@@ -492,6 +492,14 @@ router.get("/getSubmission", (req, res) => {
     console.log(error);
     res.send(error);
   }
+});
+
+router.get("/getSubmissionByIdsubmission", (req, res) => {
+  const idHSubmission = req.query.idHsubmission;
+  const q = `select * from submission where idHsubmission=${idHSubmission}`;
+  con.query(q, (err, rows) => {
+    res.send(rows);
+  });
 });
 
 router.get("/getHSubmission", (req, res) => {
