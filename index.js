@@ -183,8 +183,22 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("kirim signal", (payload) => {
+    io.to(payload.ke).emit("user masuk", {
+      signal: payload.signal,
+      dari: payload.dari,
+    });
+  });
+
   socket.on("returning signal", (payload) => {
     io.to(payload.callerID).emit("receiving returned signal", {
+      signal: payload.signal,
+      id: socket.id,
+    });
+  });
+
+  socket.on("kembalikan signal", (payload) => {
+    io.to(payload.ke).emit("terima signal kembalian", {
       signal: payload.signal,
       id: socket.id,
     });

@@ -256,7 +256,7 @@ router.post("/updateUser", uploadUserProfile, (req, res) => {
       const q = `update user set name='${name}', phoneNumber='${phone}', image='${lokasi}' where id=${decoded.id}`;
       con.query(q, (err, rows) => {
         if (err) throw err;
-        res.send(rows);
+        res.send({ status: true, msg: "success update profile" });
       });
     } catch (error) {
       console.log(error);
@@ -264,13 +264,14 @@ router.post("/updateUser", uploadUserProfile, (req, res) => {
     }
   } else {
     //tidak ada gambar
+    console.log("tidak ada gambar");
     try {
       var decoded = jwt.verify(token, "217116596");
 
-      const q = `update user set name='${name}', phoneNumber='${phone}', image='' where id=${decoded.id}`;
+      const q = `update user set name='${name}', phoneNumber='${phone}' where id=${decoded.id}`;
       con.query(q, (err, rows) => {
         if (err) throw err;
-        res.send(rows);
+        res.send({ status: true, msg: "success update profile" });
       });
     } catch (error) {
       console.log(error);
@@ -615,5 +616,11 @@ router.get("/getSchedule", (req, res) => {
     console.log(error);
   }
 });
+
+router.get("/getComment", (req, res) => {
+  const id = req.query.id;
+});
+
+router.post("/postComment", (req, res) => {});
 
 module.exports = router;
