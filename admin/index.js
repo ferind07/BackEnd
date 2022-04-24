@@ -11,6 +11,18 @@ router.get("/allUser", (req, res) => {
   });
 });
 
+router.get("/allClass", (req, res) => {
+  const q = `select * from class where status = 1`;
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.status(200).send(rows);
+  });
+});
+
+// router.get("/unApprovedInstructor", (req, res) => {
+//   const q = `select * from instructor where valid`
+// })
+
 router.get("/getUnApprovedInstructor", (req, res) => {
   const token = req.query.token;
 

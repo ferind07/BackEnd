@@ -11,6 +11,9 @@ const path = require("path");
 const nodeMailer = require("nodemailer");
 var jwt = require("jsonwebtoken");
 const util = require("util");
+const moment = require("moment");
+const midtransClient = require("midtrans-client");
+// Create Snap API instance
 
 const diskStorageBerkas = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -108,6 +111,7 @@ router.post("/login", async (req, res) => {
             id: data.id,
             email: data.email,
             role: data.role,
+            name: data.name,
           },
 
           "217116596"
@@ -196,7 +200,7 @@ router.get("/getInstructorInfo", (req, res) => {
 
 router.get("/getInstructorDetail", (req, res) => {
   const id = req.query.id;
-  const q = `select u.name, u.phoneNumber, u.image, i.berkas, i.instructorDetail from instructor i, user u where i.idUser=u.id and u.id=${id}`;
+  const q = `select u.name, u.phoneNumber, u.image, i.berkas, i.instructorDetail, u.email, i.katagori, i.timeStart, i.timeEnd from instructor i, user u where i.idUser=u.id and u.id=${id}`;
   con.query(q, (err, rows) => {
     if (err) throw err;
     //console.log(rows[0]);
@@ -207,12 +211,15 @@ router.get("/getInstructorDetail", (req, res) => {
 router.post("/registerInstructor", uploadBerkas, (req, res) => {
   const token = req.body.token;
   const katagori = req.body.katagori;
+  const detail = req.body.detail;
+  const timeStart = moment(req.body.timeStart).format("HH:mm:ss");
+  const timeEnd = moment(req.body.timeEnd).format("HH:mm:ss");
 
   try {
     const file = req.file;
     const lokasi = `/public/uploads/berkas/${file.filename}`;
     var decoded = jwt.verify(token, "217116596");
-    const q = `INSERT INTO instructor (idUser, name, katagori, valid, berkas) VALUES (${decoded.id}, '${decoded.name}', ${katagori}, 0, '${lokasi}')`;
+    const q = `INSERT INTO instructor (idUser, name, instructorDetail, katagori, valid, berkas, timeStart, timeEnd) VALUES (${decoded.id}, '${decoded.name}', '${detail}', ${katagori}, 0, '${lokasi}', '${timeStart}', '${timeEnd}')`;
     //console.log(q);
     //console.log(decoded);
     con.query(q, (err, rows) => {
@@ -267,6 +274,61 @@ router.post("/updateUser", uploadUserProfile, (req, res) => {
     console.log("tidak ada gambar");
     try {
       var decoded = jwt.verify(token, "217116596");
+
+      const q = `update user set name='${name}', phoneNumber='${phone}' where id=${decoded.id}`;
+      con.query(q, (err, rows) => {
+        if (err) throw err;
+        res.send({ status: true, msg: "success update profile" });
+      });
+    } catch (error) {
+      console.log(error);
+      res.send(error);
+    }
+  }
+});
+
+router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
+  const token = req.body.token;
+  const name = req.body.name;
+  const phone = req.body.phoneNumber;
+  const detail = req.body.detail;
+  const timeStart = moment(req.body.timeStart).format("HH:mm");
+  const timeEnd = moment(req.body.timeEnd).format("HH:mm");
+  const file = req.file;
+  //console.log(token);
+  if (file) {
+    //ada gambar
+
+    try {
+      var decoded = jwt.verify(token, "217116596");
+
+      const updateDetailInstructor = await updateDetailInstructor(
+        decoded.id,
+        detail,
+        timeStart,
+        timeEnd
+      );
+
+      const lokasi = `/public/uploads/userProfile/${file.filename}`;
+      const q = `update user set name='${name}', phoneNumber='${phone}', image='${lokasi}' where id=${decoded.id}`;
+      con.query(q, (err, rows) => {
+        if (err) throw err;
+        res.send({ status: true, msg: "success update profile" });
+      });
+    } catch (error) {
+      console.log(error);
+      res.send(error);
+    }
+  } else {
+    //tidak ada gambar
+    console.log("tidak ada gambar");
+    try {
+      var decoded = jwt.verify(token, "217116596");
+
+      const query = util.promisify(con.query).bind(con);
+      const q1 = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}' where idUser=${decoded.id}`;
+      console.log(q1);
+      const hasil = await query(q1);
 
       const q = `update user set name='${name}', phoneNumber='${phone}' where id=${decoded.id}`;
       con.query(q, (err, rows) => {
@@ -591,6 +653,34 @@ router.get("/instructorEvent", (req, res) => {
   }
 });
 
+router.get("/userEvent", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select u.name, s.dateStart, s.dateEnd, s.status, c.title from submission s, class c, user u where s.idUser=${decoded.id} and s.status = 1 and c.id=s.idClass and u.id = s.idUser`;
+    console.log(q);
+    con.query(q, (err, rows) => {
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/instructorConfirmedSchedule", (req, res) => {
+  const token = req.query.token;
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select u.name, s.dateStart, s.dateEnd, s.status, c.title from submission s, class c, user u where s.idInstructor=${decoded.id} and s.status = 1 and c.id=s.idClass and u.id = s.idUser`;
+    con.query(q, (err, rows) => {
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 router.get("/getSchedule", (req, res) => {
   const token = req.query.token;
   try {
@@ -617,10 +707,116 @@ router.get("/getSchedule", (req, res) => {
   }
 });
 
-router.get("/getComment", (req, res) => {
-  const id = req.query.id;
+router.get("/getClassList", (req, res) => {
+  const token = req.query.token;
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select * from class where idInstructor=${decoded.id}`;
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
-router.post("/postComment", (req, res) => {});
+router.get("/getReview", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `select * from review r, user u where idTo=${decoded.id} and r.idFrom=u.id`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/getReviewByID", (req, res) => {
+  const idInstructor = req.query.id;
+  const q = `select * from review r, user u where idTo = ${idInstructor} and r.idFrom = u.id`;
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
+router.post("/postReview", (req, res) => {
+  const token = req.body.token;
+  const idTo = req.body.idTo;
+  const rating = req.body.rating;
+  const comment = req.body.comment;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `INSERT INTO review (id, idTo, idFrom, rating, comment, createAt) VALUES (NULL, ${idTo}, ${decoded.id}, ${rating}, '${comment}', current_timestamp())`;
+
+    con.query(q, (err, rows) => {
+      if (err) console.log(err);
+      if (rows.affectedRows == 1) {
+        res.status(200).send({
+          status: true,
+          msg: "Success add review",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.post("/userPay", (req, res) => {
+  const order_id = req.body.order_id;
+  const gross_amount = req.body.gross_amount;
+
+  try {
+    let snap = new midtransClient.Snap({
+      // Set to true if you want Production Environment (accept real transaction).
+      isProduction: false,
+      serverKey: "SB-Mid-server-XESumlYA6kMhu4f4yT8KLauT",
+    });
+
+    let parameter = {
+      transaction_details: {
+        order_id: order_id,
+        gross_amount: gross_amount,
+      },
+      credit_card: {
+        secure: true,
+      },
+    };
+
+    snap.createTransaction(parameter).then((transaction) => {
+      // transaction token
+      let transactionToken = transaction.token;
+
+      console.log(transactionToken);
+      res.send(transactionToken);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.post("/deleteClass", (req, res) => {
+  const idClass = req.body.idClass;
+
+  const q = `update class set status=0 where id=${idClass}`;
+  console.log(q);
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send({
+      status: true,
+      msg: "Success delete class",
+    });
+  });
+});
 
 module.exports = router;

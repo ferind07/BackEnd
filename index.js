@@ -183,22 +183,8 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("kirim signal", (payload) => {
-    io.to(payload.ke).emit("user masuk", {
-      signal: payload.signal,
-      dari: payload.dari,
-    });
-  });
-
   socket.on("returning signal", (payload) => {
     io.to(payload.callerID).emit("receiving returned signal", {
-      signal: payload.signal,
-      id: socket.id,
-    });
-  });
-
-  socket.on("kembalikan signal", (payload) => {
-    io.to(payload.ke).emit("terima signal kembalian", {
       signal: payload.signal,
       id: socket.id,
     });
@@ -235,6 +221,22 @@ io.on("connection", (socket) => {
 
   socket.on("acceptCall", (data) => {
     io.to(data.to).emit("callAccepted", data.signal);
+  });
+
+  socket.on("sendChat", (data) => {
+    const roomID = data.room;
+    const text = data.text;
+    const sender = socket.id;
+
+    room[roomID].socketID.forEach((element) => {
+      if (element != sender) {
+        console.log("send " + element + " from " + sender);
+        io.to(element).emit("newChat", {
+          text: text,
+          sender: false,
+        });
+      }
+    });
   });
 });
 
