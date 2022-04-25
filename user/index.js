@@ -421,7 +421,7 @@ router.get("/getClassList", (req, res) => {
 
 router.get("/getClassDetail", (req, res) => {
   const id = req.query.id;
-  const q = `select * from class where id=${id}`;
+  const q = `select * from class c, instructor i where c.id=${id} and c.idInstructor=i.idUser`;
   con.query(q, (err, rows) => {
     if (err) throw err;
     res.send(rows[0]);
