@@ -112,6 +112,7 @@ router.post("/login", async (req, res) => {
             email: data.email,
             role: data.role,
             name: data.name,
+            phoneNumber: data.phoneNumber,
           },
 
           "217116596"
@@ -524,6 +525,7 @@ router.post("/submissionClass", async (req, res) => {
         res.status(200).send({
           status: true,
           msg: "Success submit class",
+          data: hasilHSubmission,
         });
       }
     } else {
@@ -775,8 +777,11 @@ router.post("/postReview", (req, res) => {
 router.post("/userPay", (req, res) => {
   const order_id = req.body.order_id;
   const gross_amount = req.body.gross_amount;
-
+  console.log(order_id);
+  const token = req.body.token;
+  //console.log(token);
   try {
+    var decoded = jwt.verify(token, "217116596");
     let snap = new midtransClient.Snap({
       // Set to true if you want Production Environment (accept real transaction).
       isProduction: false,
@@ -790,6 +795,11 @@ router.post("/userPay", (req, res) => {
       },
       credit_card: {
         secure: true,
+      },
+      customer_details: {
+        first_name: decoded.name,
+        email: decoded.email,
+        phone: decoded.phoneNumber,
       },
     };
 
