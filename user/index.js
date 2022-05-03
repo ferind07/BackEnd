@@ -815,6 +815,24 @@ router.post("/userPay", (req, res) => {
   }
 });
 
+router.post("/unFinishedPayment", (req, res) => {
+  const insertId = req.body.insertId;
+
+  const q1 = `delete from hsubmission where id=${insertId}`;
+
+  con.query(q1, (err, rows) => {
+    if (err) throw err;
+    const q2 = `delete from submission where idHsubmission=${insertId}`;
+    con.query(q2, (err2, rows2) => {
+      if (err2) throw err2;
+      res.send({
+        status: true,
+        msg: "Success process unfinished payment",
+      });
+    });
+  });
+});
+
 router.post("/deleteClass", (req, res) => {
   const idClass = req.body.idClass;
 
