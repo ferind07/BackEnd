@@ -816,6 +816,37 @@ router.post("/userPay", (req, res) => {
   }
 });
 
+router.post("/finishPayment", (req, res) => {
+  const token = req.body.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const transaction_id = req.body.transaction_id;
+    const transaction_code = req.body.transaction_code;
+    const transaction_type = req.body.transaction_type;
+    const transaction_status_code = req.body.transaction_status_code;
+    const transaction_hSubmission_id = req.body.transaction_hSubmission_id;
+    const transaction_time = req.body.transaction_time;
+    const transaction_user_id = req.body.transaction_user_id;
+
+    const q =
+      `INSERT INTO transaction (transaction_id, transaction_code, transaction_type, transaction_status_code, transaction_hSubmission_id, transaction_time, transaction_user_id) ` +
+      `VALUES ('', '', '', '', '', '', '')`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        res.send({
+          status: true,
+          msg: "Success add transaction",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 router.post("/unFinishedPayment", (req, res) => {
   const insertId = req.body.insertId;
 
