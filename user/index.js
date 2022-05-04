@@ -821,17 +821,16 @@ router.post("/finishPayment", (req, res) => {
 
   try {
     var decoded = jwt.verify(token, "217116596");
+    const order_id = req.body.order_id;
     const transaction_id = req.body.transaction_id;
-    const transaction_code = req.body.transaction_code;
     const transaction_type = req.body.transaction_type;
     const transaction_status_code = req.body.transaction_status_code;
     const transaction_hSubmission_id = req.body.transaction_hSubmission_id;
     const transaction_time = req.body.transaction_time;
-    const transaction_user_id = req.body.transaction_user_id;
 
     const q =
-      `INSERT INTO transaction (transaction_id, transaction_code, transaction_type, transaction_status_code, transaction_hSubmission_id, transaction_time, transaction_user_id) ` +
-      `VALUES ('', '', '', '', '', '', '')`;
+      `INSERT INTO transaction (order_id, transaction_code, transaction_type, transaction_status_code, transaction_hSubmission_id, transaction_time, transaction_user_id) ` +
+      `VALUES ('${order_id}', '${transaction_id}', '${transaction_type}', ${transaction_status_code}, ${transaction_hSubmission_id}, '${transaction_time}', ${decoded.id})`;
 
     con.query(q, (err, rows) => {
       if (err) throw err;
