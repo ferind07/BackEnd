@@ -92,6 +92,38 @@ async function sendEmail() {
   });
 }
 
+async function sendEmailForgetPassword(email, res) {
+  const transporter = nodeMailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "ferryindra007@gmail.com",
+      pass: "Surabaya",
+    },
+  });
+
+  var mailOptions = {
+    from: "ferryindra007@gmail.com",
+    to: `${email}`,
+    subject: "Sending Email using Node.js",
+    html: await readFile("./user/email.html", "utf8"),
+  };
+
+  await transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      console.log(error);
+      res.send(error);
+    } else {
+      console.log("Email sent: " + info.response);
+      res.send({ status: true, msg: "Please check your email" });
+    }
+  });
+}
+
+router.post("/forgetPassword", (req, res) => {
+  const email = req.body.email;
+  sendEmailForgetPassword(email, res);
+});
+
 router.post("/login", async (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
