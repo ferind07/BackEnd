@@ -15,6 +15,13 @@ const moment = require("moment");
 const midtransClient = require("midtrans-client");
 // Create Snap API instance
 
+//xendit payment
+const xenditSecretKEY = `xnd_development_gZ6UwlJq2YDJg9U046XEA91ueFkMsjCjWa0boSgIXE2Lygo6ko3zadK0l6gXw`;
+//const Xendit = require("xendit-node");
+//const x = new Xendit({ secretKey: xenditSecretKEY });
+
+//const x = new require("xendit-node")({ secretKey: xenditSecretKEY });
+
 const diskStorageBerkas = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, path.join(__dirname, "../public/uploads/berkas"));
@@ -908,6 +915,27 @@ router.post("/deleteClass", (req, res) => {
       msg: "Success delete class",
     });
   });
+});
+
+const Xendit = require("xendit-node");
+const x = new Xendit({
+  secretKey:
+    "xnd_development_gZ6UwlJq2YDJg9U046XEA91ueFkMsjCjWa0boSgIXE2Lygo6ko3zadK0l6gXw",
+});
+
+router.post("/xenditPAY", async (req, res) => {
+  const { Invoice } = x;
+  const invoiceSpecificOptions = {};
+  const i = new Invoice(invoiceSpecificOptions);
+
+  const resp = await i.createInvoice({
+    externalID: "demo_1475801962607",
+    amount: 230000,
+    payerEmail: "sample_email@xendit.co",
+    description: "Trip to Bali",
+  });
+  console.log(resp);
+  res.send(resp);
 });
 
 module.exports = router;
