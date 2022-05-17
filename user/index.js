@@ -938,4 +938,62 @@ router.post("/xenditPAY", async (req, res) => {
   res.send(resp);
 });
 
+router.get("/getHSubmissionDone", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `select h.id, h.timeInsert, i.name, c.image, c.title, c.price, i.idUser from hSubmission h, class c, instructor i where h.idClass = c.id and h.idInstructor = i.idUser and h.idUser = ${decoded.id}`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      //console.log(rows);
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/getComment", (req, res) => {
+  const idHSubmission = req.query.idHSubmission;
+
+  const q = `select * from review where idHSubmission=${idHSubmission}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    console.log(rows);
+    res.send(rows);
+  });
+});
+
+router.post("/giveReview", (req, res) => {
+  const token = req.body.token;
+
+  const idHSubmission = req.body.idHSubmission;
+  const idInstructor = req.body.idInstructor;
+  const rating = req.body.rating;
+  const comment = req.body.comment;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `INSERT INTO review (id, idHSubmission, idTo, idFrom, rating, comment, createAt) VALUES (NULL, ${idHSubmission}, ${idInstructor}, ${decoded.id}, ${rating}, '${comment}', current_timestamp())`;
+
+    console.log(q);
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        res.status(200).send({
+          status: true,
+          msg: "Success submit review",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 module.exports = router;
