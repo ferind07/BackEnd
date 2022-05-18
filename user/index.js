@@ -996,4 +996,9 @@ router.post("/giveReview", (req, res) => {
   }
 });
 
+router.post("/invoicesPaid", (req, res) => {
+  const id = req.body.id;
+  res.send(id);
+});
+
 module.exports = router;
