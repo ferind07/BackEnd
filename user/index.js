@@ -938,6 +938,162 @@ router.post("/xenditPAY", async (req, res) => {
   res.send(resp);
 });
 
+router.get("/getBank", async (req, res) => {
+  const { Disbursement } = x;
+  const disbursementSpecificOptions = {};
+  const d = new Disbursement(disbursementSpecificOptions);
+
+  const bankList = await d.getBanks();
+
+  res.send(bankList);
+});
+
+router.post("/addBankAccount", (req, res) => {
+  const token = req.body.token;
+  const bankCode = req.body.bankCode;
+  const accountHolderName = req.body.accountHolderName;
+  const accountNumber = req.body.accountNumber;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `INSERT INTO bankAccount (id, idUser, bankCode, accountHolderName, accountNumber) VALUES (NULL, ${decoded.id}, '${bankCode}', '${accountHolderName}', '${accountNumber}')`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        res.status(200).send({
+          status: true,
+          msg: "Success insert bank account",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.post("/updateBankAccount", (req, res) => {
+  const token = req.body.token;
+  const bankCode = req.body.bankCode;
+  const accountHolderName = req.body.accountHolderName;
+  const accountNumber = req.body.accountNumber;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `update bankAccount set bankCode='${bankCode}', accountHolderName='${accountHolderName}', accountNumber='${accountNumber}' where idUser=${decoded.id}`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        res.status(200).send({
+          status: true,
+          msg: "Success edit bank account information",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/getBankAccountInformation", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `select * from bankAccount where idUser=${decoded.id}`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.post("/cashOut", async (req, res) => {
+  const token = req.body.token;
+  const amount = req.body.amount;
+  const accountHolderName = req.body.accountHolderName;
+  const accountNumber = req.body.accountNumber;
+  const bankCode = req.body.bankCode;
+  const saldoBaru = req.body.saldoBaru;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `INSERT INTO dirbushment (id, idUser, dirbushmentId, amount, bankCode, accountHolderName, accountNumber, status) VALUES (NULL, ${decoded.id}, '', ${amount}, '${bankCode}', '${accountHolderName}', '${accountNumber}', 0)`;
+
+    con.query(q, async (err, rows) => {
+      if (err) throw err;
+      //res.send(rows);
+
+      const { Disbursement } = x;
+      const disbursementSpecificOptions = {};
+      const d = new Disbursement(disbursementSpecificOptions);
+
+      d.create({
+        externalID: "myDirbushment-" + rows.insertId,
+        bankCode: bankCode,
+        accountHolderName: accountHolderName,
+        accountNumber: accountNumber,
+        description: "description",
+        amount: amount,
+      })
+        .then(({ id }) => {
+          console.log(`Disbursement created with ID: ${id}`);
+          const q2 = `update dirbushment set dirbushmentId='${id}' where id=${rows.insertId}`;
+
+          con.query(q2, (err2, rows2) => {
+            if (err2) throw err2;
+            if (rows2.affectedRows == 1) {
+              const q3 = `update user set saldo=${saldoBaru} where id=${decoded.id}`;
+
+              con.query(q3, (err3, rows3) => {
+                if (err3) throw err3;
+                if (rows3.affectedRows == 1) {
+                  res.send({
+                    status: true,
+                    msg: "Success create dirbushment",
+                  });
+                }
+              });
+            }
+          });
+        })
+        .catch((e) => {
+          console.log(e);
+          console.error(
+            `Disbursement creation failed with message: ${e.message}`
+          );
+        });
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/dirbushmentHistory", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `select * from dirbushment where idUser=${decoded.id}`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 router.get("/getHSubmissionDone", (req, res) => {
   const token = req.query.token;
 
