@@ -628,9 +628,10 @@ router.get("/getHSubmissionbyID", (req, res) => {
 
   try {
     const q =
-      `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
+      `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id, c.title, c.price, c.duration, u.image as userImage, u.id as idUser ` +
       `from hSubmission h, user u, instructor i, class c ` +
       `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and h.id=${id}`;
+    console.log(q);
     con.query(q, (err, rows) => {
       res.send(rows);
     });
@@ -638,6 +639,62 @@ router.get("/getHSubmissionbyID", (req, res) => {
     console.log(error);
     res.send(error);
   }
+});
+
+router.post("/declineClass", async (req, res) => {
+  const idUser = req.body.idUser;
+  const price = req.body.price;
+
+  const q = `select * from user where id=${idUser}`;
+  console.log(q);
+
+  const query = util.promisify(con.query).bind(con);
+
+  const hasil = await query(q);
+
+  const saldo = hasil[0].saldo;
+
+  const q2 = `update user set saldo=${saldo + price} where id=${idUser}`;
+
+  con.query(q2, (err, rows) => {
+    if (err) throw err;
+    if (rows.affectedRows == 1) {
+      res.send({
+        status: true,
+        msg: "Success refund moneyd",
+      });
+    }
+  });
+});
+
+router.post("/sendMoney", async (req, res) => {
+  //const idHsubmission = req.body.idHSubmission;
+  const idClass = req.body.idClass;
+  const idSubmission = req.body.idSubmission;
+
+  const q = `select * from class where id=${idClass}`;
+
+  const query = util.promisify(con.query).bind(con);
+
+  const hasil = await query(q);
+
+  const gaji = hasil[0].price / hasil[0].classCount;
+
+  const q2 = `select * from user where id=${hasil[0].idInstructor}`;
+
+  const hasil2 = await query(q2);
+
+  const saldo = hasil2[0].saldo + gaji;
+
+  const q3 = `update user set saldo=${saldo} where id=${hasil[0].idInstructor}`;
+
+  const hasil3 = await query(q3);
+
+  const q4 = `update submission set status=1 where id=${idSubmission}`;
+
+  const hasil4 = await q4;
+
+  res.send(hasil4);
 });
 
 router.post("/actionClass", async (req, res) => {
@@ -924,18 +981,28 @@ const x = new Xendit({
 });
 
 router.post("/xenditPAY", async (req, res) => {
+  const token = req.body.token;
+  const amount = req.body.amount;
+  const id = req.body.id;
+
   const { Invoice } = x;
   const invoiceSpecificOptions = {};
   const i = new Invoice(invoiceSpecificOptions);
 
-  const resp = await i.createInvoice({
-    externalID: "demo_1475801962607",
-    amount: 230000,
-    payerEmail: "sample_email@xendit.co",
-    description: "Trip to Bali",
-  });
-  console.log(resp);
-  res.send(resp);
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const resp = await i.createInvoice({
+      externalID: "demo_" + id,
+      amount: amount,
+      payerEmail: decoded.email,
+      description: "Payment for T-DEMY",
+    });
+    console.log(resp);
+    res.send(resp);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 router.get("/getBank", async (req, res) => {
