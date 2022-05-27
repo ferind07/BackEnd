@@ -87,4 +87,32 @@ router.post("/approveInstructor", (req, res) => {
   });
 });
 
+router.get("/incomeData", (req, res) => {
+  const q = `select h.id as idHsubmission, c.price, h.timeUpdate from hSubmission h, class c where h.idClass=c.id and h.status=3`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
+router.get("/catagoryInfo", (req, res) => {
+  const q = `select * from hSubmission h, instructor i where h.idInstructor=i.idUser and h.status!=0`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    //console.log(rows);
+    res.send(rows);
+  });
+});
+
+router.get("/cashOutHistory", (req, res) => {
+  const q = `select * from dirbushment d, user u where d.idUser=u.id`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
 module.exports = router;
