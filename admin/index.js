@@ -106,11 +106,103 @@ router.get("/catagoryInfo", (req, res) => {
   });
 });
 
+router.get("/instructorCatagory", (req, res) => {
+  const q = `select * from instructor`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
 router.get("/cashOutHistory", (req, res) => {
   const q = `select * from dirbushment d, user u where d.idUser=u.id`;
 
   con.query(q, (err, rows) => {
     if (err) throw err;
+    res.send(rows);
+  });
+});
+
+router.get("/topUser", (req, res) => {
+  const dateStart = req.query.dateStart;
+  const dateEnd = req.query.dateEnd;
+
+  const q =
+    `select count(u.id) as total, u.id, u.image, u.name ` +
+    `from hSubmission h, user u ` +
+    `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' ` +
+    `group by u.id`;
+
+  console.log(q);
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
+router.get("/topInstructor", (req, res) => {
+  const dateStart = req.query.dateStart;
+  const dateEnd = req.query.dateEnd;
+  const q =
+    `select count(h.idInstructor) as total, h.idInstructor as id, u.name, i.katagori ` +
+    `from hSubmission h, user u, instructor i ` +
+    `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' and h.idInstructor=i.idUser ` +
+    `group by h.idInstructor`;
+
+  console.log(q);
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
+function returnDataset(data) {
+  console.log(data.length);
+  const tempLabelData = [];
+  const tempGraphLineData = [];
+
+  data.map((res) => {
+    tempLabelData.push(res.monthName);
+    tempGraphLineData.push(res.total);
+  });
+
+  const tmp = {
+    tempLabelData,
+    datasets: [
+      {
+        label: "Transaction",
+        data: tempGraphLineData,
+        borderColor: "rgb(255, 99, 132)",
+        backgroundColor: "rgba(255, 99, 132, 0.5)",
+      },
+    ],
+  };
+
+  return tmp;
+}
+
+router.get("/getIncomeData", (req, res) => {
+  const dateStart = req.query.dateStart;
+  const dateEnd = req.query.dateEnd;
+  //format YYYY-MM-DD
+  //jangan lupa ganti status
+  const q = `select h.id, c.price, h.timeUpdate from hSubmission h, class c where h.idClass=c.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}'`;
+
+  const q2 =
+    `SELECT MONTH(h.timeUpdate) as month, MONTHNAME(h.timeUpdate) as monthName, SUM(c.price) as total ` +
+    `FROM hSubmission h, class c ` +
+    `WHERE h.idClass=c.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' ` +
+    `GROUP BY MONTH(h.timeUpdate)`;
+
+  console.log(q2);
+
+  con.query(q2, (err, rows) => {
+    if (err) throw err;
+    //returnDataset(rows);
+    console.log(returnDataset(rows));
     res.send(rows);
   });
 });
