@@ -129,12 +129,13 @@ router.get("/topUser", (req, res) => {
   const dateEnd = req.query.dateEnd;
 
   const q =
-    `select count(u.id) as total, u.id, u.image, u.name ` +
-    `from hSubmission h, user u ` +
-    `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' ` +
-    `group by u.id`;
+    `select count(u.id) as total, sum(c.price) as totalPrice, u.id, u.image, u.name ` +
+    `from hSubmission h, user u, class c ` +
+    `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' and h.idClass=c.id ` +
+    `group by u.id ` +
+    `order by 1 desc`;
 
-  console.log(q);
+  //console.log(q);
 
   con.query(q, (err, rows) => {
     if (err) throw err;
@@ -146,10 +147,11 @@ router.get("/topInstructor", (req, res) => {
   const dateStart = req.query.dateStart;
   const dateEnd = req.query.dateEnd;
   const q =
-    `select count(h.idInstructor) as total, h.idInstructor as id, u.name, i.katagori ` +
-    `from hSubmission h, user u, instructor i ` +
-    `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' and h.idInstructor=i.idUser ` +
-    `group by h.idInstructor`;
+    `select count(h.idInstructor) as total, sum(c.price) as totalPrice, h.idInstructor as id, u.name, u.image, i.katagori ` +
+    `from hSubmission h, user u, instructor i, class c ` +
+    `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' and h.idInstructor=i.idUser and h.idClass=c.id ` +
+    `group by h.idInstructor ` +
+    `order by 1 desc`;
 
   console.log(q);
 

@@ -586,7 +586,7 @@ router.get("/getSubmission", (req, res) => {
   try {
     const decoded = jwt.verify(token, "217116596");
     const q =
-      `select s.id, c.title, u.name, s.dateStart, s.dateEnd, s.idUser ` +
+      `select s.id, c.title, u.name, s.dateStart, s.dateEnd, s.idUser, s.status ` +
       `from submission s, user u, class c ` +
       `where s.idInstructor=${decoded.id} and u.id=s.idUser and s.idClass=c.id and s.idHsubmission=${id}`;
     con.query(q, (err, rows) => {
@@ -697,6 +697,140 @@ router.post("/sendMoney", async (req, res) => {
   res.send(hasil4);
 });
 
+async function sendMoney(query, idClass) {
+  const q = `select * from class where id=${idClass}`;
+
+  const hasil = await query(q);
+
+  const gaji = hasil[0].price / hasil[0].classCount;
+
+  const q2 = `select * from user where id=${hasil[0].idInstructor}`;
+
+  const hasil2 = await query(q2);
+
+  const gajiInstructor = (gaji * 95) / 100;
+  const gajiAdmin = (gaji * 5) / 100;
+
+  const saldo = hasil2[0].saldo + gajiInstructor;
+
+  const q3 = `update user set saldo=${saldo} where id=${hasil[0].idInstructor}`;
+
+  const queryGajiAdmin = await sendMoneyToAdmin(query, gajiAdmin);
+
+  const hasil3 = await query(q3);
+}
+
+async function sendMoneyToAdmin(query, amount) {
+  const q = `select * from user where role=3`;
+  const dataAdmin = await query(q);
+
+  const saldoBaru = dataAdmin[0].saldo + amount;
+
+  const q2 = `update user set saldo=${saldoBaru} where role=3`;
+  const updateSaldo = await query(q2);
+}
+
+async function checkClassDone(query, idClass, idHSubmission) {
+  const q3 = `select * from class where id=${idClass}`;
+
+  const dataClass = await query(q3);
+
+  const classCount = dataClass[0].classCount;
+
+  const q4 = `select * from submission where idHsubmission=${idHSubmission} and status=3`;
+  const dataSubmission = await query(q4);
+
+  if (dataSubmission.length == classCount) {
+    console.log("kelas sudah selesai");
+
+    const q5 = `update hSubmission set status=3 where idHsubmission=${idHSubmission}`;
+
+    const updateHSubmission = await query(q5);
+
+    if (updateHSubmission.affectedRows == 1) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
+
+router.post("/finishClass", async (req, res) => {
+  const idSubmission = req.body.idSubmission;
+
+  const query = util.promisify(con.query).bind(con);
+
+  const q = `update submission set status=2 where id=${idSubmission}`;
+
+  const updateSubmission = await query(q);
+
+  // const q2 = `select * from class submission where id=${idSubmission}`;
+  const q2 = `select * from submission where id=${idSubmission}`;
+
+  const dataSubmission = await query(q2);
+
+  // const q3 = `select * from class where id=${dataSubmission[0].idClass}`
+
+  // const dataClass = await query(q3);
+
+  // console.log(q2);
+  // console.log(dataSubmission);
+  const idHSubmission = dataSubmission[0].idHsubmission;
+  const idClass = dataSubmission[0].idClass;
+
+  // const checkClassDone = await checkClassDone(query, idClass, idHSubmission);
+  // const sendMoney = await sendMoney(query, idClass);
+  //finish class
+  //1. update status
+  //2. check class done
+  //3. send money
+
+  const q3 = `select * from class where id=${idClass}`;
+
+  const dataClass = await query(q3);
+
+  const classCount = dataClass[0].classCount;
+
+  const q4 = `select * from submission where idHsubmission=${idHSubmission} and status=2`;
+  const dataSubmissionDone = await query(q4);
+  console.log(q4);
+
+  if (dataSubmissionDone.length == classCount) {
+    console.log("kelas sudah selesai");
+
+    const q5 = `update hSubmission set status=3 where id=${idHSubmission}`;
+
+    const updateHSubmission = await query(q5);
+  }
+
+  const gaji = dataClass[0].price / dataClass[0].classCount;
+
+  const q6 = `select * from user where id=${dataClass[0].idInstructor}`;
+
+  const hasil2 = await query(q6);
+
+  const gajiInstructor = (gaji * 95) / 100;
+  const gajiAdmin = (gaji * 5) / 100;
+
+  const saldo = hasil2[0].saldo + gajiInstructor;
+
+  const q7 = `update user set saldo=${saldo} where id=${dataClass[0].idInstructor}`;
+
+  // const queryGajiAdmin = await sendMoneyToAdmin(query, gajiAdmin);
+
+  const hasil3 = await query(q7);
+
+  const q8 = `select * from user where role=3`;
+  const dataAdmin = await query(q8);
+
+  const saldoBaru = dataAdmin[0].saldo + gajiAdmin;
+
+  const q9 = `update user set saldo=${saldoBaru} where role=3`;
+  const updateSaldo = await query(q9);
+
+  res.send(updateSaldo);
+});
+
 router.post("/actionClass", async (req, res) => {
   const action = req.body.action;
   const token = req.body.token;
@@ -796,7 +930,7 @@ router.get("/getSchedule", (req, res) => {
         `from hSubmission h, user u, instructor i, class c ` +
         `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and i.idUser = ${decoded.id}`;
     }
-    console.log(q);
+    //console.log(q);
     con.query(q, (err, rows) => {
       if (err) console.log(err);
       res.send(rows);

@@ -238,6 +238,14 @@ io.on("connection", (socket) => {
       }
     });
   });
+
+  socket.on("leave", (data) => {
+    // console.log(data.id);
+    // console.log(data.to);
+    const id = data.id;
+    console.log(room);
+    io.to(data.to).emit("goToResultPage");
+  });
 });
 
 const PORT = process.env.PORT || 8000;
