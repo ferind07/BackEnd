@@ -251,6 +251,7 @@ router.get("/getInstructorDetail", (req, res) => {
 router.post("/registerInstructor", uploadBerkas, (req, res) => {
   const token = req.body.token;
   const katagori = req.body.katagori;
+  const katagoriDetail = req.body.katagoriDetail;
   const detail = req.body.detail;
   const timeStart = moment(req.body.timeStart).format("HH:mm:ss");
   const timeEnd = moment(req.body.timeEnd).format("HH:mm:ss");
@@ -259,7 +260,7 @@ router.post("/registerInstructor", uploadBerkas, (req, res) => {
     const file = req.file;
     const lokasi = `/public/uploads/berkas/${file.filename}`;
     var decoded = jwt.verify(token, "217116596");
-    const q = `INSERT INTO instructor (idUser, name, instructorDetail, katagori, valid, berkas, timeStart, timeEnd) VALUES (${decoded.id}, '${decoded.name}', '${detail}', ${katagori}, 0, '${lokasi}', '${timeStart}', '${timeEnd}')`;
+    const q = `INSERT INTO instructor (idUser, name, instructorDetail, katagori, katagoriDetail, valid, berkas, timeStart, timeEnd) VALUES (${decoded.id}, '${decoded.name}', '${detail}', ${katagori}, '${katagoriDetail}', 0, '${lokasi}', '${timeStart}', '${timeEnd}')`;
     //console.log(q);
     //console.log(decoded);
     con.query(q, (err, rows) => {
@@ -342,18 +343,26 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
     try {
       var decoded = jwt.verify(token, "217116596");
 
-      const updateDetailInstructor = await updateDetailInstructor(
-        decoded.id,
-        detail,
-        timeStart,
-        timeEnd
-      );
+      // const updateDetailInstructor = await updateDetailInstructor(
+      //   decoded.id,
+      //   detail,
+      //   timeStart,
+      //   timeEnd
+      // );
 
-      const lokasi = `/public/uploads/userProfile/${file.filename}`;
-      const q = `update user set name='${name}', phoneNumber='${phone}', image='${lokasi}' where id=${decoded.id}`;
-      con.query(q, (err, rows) => {
+      const qIns = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}' where idUser=${decoded.id}`;
+      console.log(qIns);
+      con.query(qIns, (err, rows) => {
         if (err) throw err;
-        res.send({ status: true, msg: "success update profile" });
+
+        if (rows.affectedRows == 1) {
+          const lokasi = `/public/uploads/userProfile/${file.filename}`;
+          const q = `update user set name='${name}', phoneNumber='${phone}', image='${lokasi}' where id=${decoded.id}`;
+          con.query(q, (err, rows) => {
+            if (err) throw err;
+            res.send({ status: true, msg: "success update profile" });
+          });
+        }
       });
     } catch (error) {
       console.log(error);

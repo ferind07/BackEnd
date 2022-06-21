@@ -23,6 +23,30 @@ router.get("/allClass", (req, res) => {
 //   const q = `select * from instructor where valid`
 // })
 
+router.get("/getDetailInstructor", (req, res) => {
+  const id = req.query.id;
+
+  const q = `select * from instructor where idUser=${id}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+
+    res.send(rows[0]);
+  });
+});
+
+router.get("/getUserInfo", (req, res) => {
+  const id = req.query.id;
+
+  const q = `select * from user where id=${id}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+
+    res.send(rows[0]);
+  });
+});
+
 router.get("/getUnApprovedInstructor", (req, res) => {
   const token = req.query.token;
 
