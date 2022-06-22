@@ -13,7 +13,6 @@ app.use("/public", express.static("public"));
 var userRoutes = require("./user/index");
 var adminRoutes = require("./admin/index");
 const con = require("./skripsi_db_connection");
-const e = require("express");
 
 app.use("/user", userRoutes);
 app.use("/admin", adminRoutes);

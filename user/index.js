@@ -131,12 +131,39 @@ router.post("/forgetPassword", (req, res) => {
   sendEmailForgetPassword(email, res);
 });
 
+async function usePooledConnectionAsync(actionAsync) {
+  const connection = await new Promise((resolve, reject) => {
+    con.getConnection((ex, connection) => {
+      if (ex) {
+        reject(ex);
+      } else {
+        resolve(connection);
+      }
+    });
+  });
+  try {
+    return await actionAsync(connection);
+  } finally {
+    connection.release();
+  }
+}
+
+router.get("/semuaUser", async (req, res) => {
+  const q = `select * from user`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
 router.post("/login", async (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const hash = SHA256(password).toString();
   const q = `select * from user where email='${email}' and password='${hash}'`;
   //console.log(q);
+
   con.query(q, (err, rows) => {
     if (err) throw err;
     //res.send(rows);
