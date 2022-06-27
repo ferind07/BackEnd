@@ -34,6 +34,13 @@ var con = mysql.createPool({
   database: "ferryind_skripsi",
 });
 
+// var con = mysql.createPool({
+//   host: "localhost",
+//   user: "root",
+//   password: "",
+//   database: "skripsi",
+// });
+
 // con.connect(function (err) {
 //   if (err) console.log(err);
 //   console.log("Connected!");

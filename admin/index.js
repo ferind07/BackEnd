@@ -159,7 +159,7 @@ router.get("/topUser", (req, res) => {
     `group by u.id ` +
     `order by 1 desc`;
 
-  //console.log(q);
+  console.log(q);
 
   con.query(q, (err, rows) => {
     if (err) throw err;
@@ -171,7 +171,7 @@ router.get("/topInstructor", (req, res) => {
   const dateStart = req.query.dateStart;
   const dateEnd = req.query.dateEnd;
   const q =
-    `select count(h.idInstructor) as total, sum(c.price) as totalPrice, h.idInstructor as id, u.name, u.image, i.katagori ` +
+    `select count(h.idInstructor) as total, sum(c.price) as totalPrice, h.idInstructor as id, i.name, u.image, i.katagori ` +
     `from hSubmission h, user u, instructor i, class c ` +
     `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' and h.idInstructor=i.idUser and h.idClass=c.id ` +
     `group by h.idInstructor ` +
@@ -181,6 +181,7 @@ router.get("/topInstructor", (req, res) => {
 
   con.query(q, (err, rows) => {
     if (err) throw err;
+    console.log(rows);
     res.send(rows);
   });
 });

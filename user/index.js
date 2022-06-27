@@ -267,7 +267,7 @@ router.get("/getInstructorInfo", (req, res) => {
 
 router.get("/getInstructorDetail", (req, res) => {
   const id = req.query.id;
-  const q = `select u.name, u.phoneNumber, u.image, i.berkas, i.instructorDetail, u.email, i.katagori, i.timeStart, i.timeEnd from instructor i, user u where i.idUser=u.id and u.id=${id}`;
+  const q = `select u.name, u.phoneNumber, u.image, i.katagoriDetail, i.berkas, i.instructorDetail, u.email, i.katagori, i.timeStart, i.timeEnd from instructor i, user u where i.idUser=u.id and u.id=${id}`;
   con.query(q, (err, rows) => {
     if (err) throw err;
     //console.log(rows[0]);
@@ -307,7 +307,7 @@ router.post("/registerInstructor", uploadBerkas, (req, res) => {
 
 router.get("/getInstructorList", (req, res) => {
   const katagori = req.query.katagori;
-  const q = `select u.id, u.email, u.name, u.phoneNumber, u.image from user u, instructor i where u.id=i.idUser and valid=1 and role=2 and katagori=${katagori}`;
+  const q = `select u.id, u.email, u.name, u.phoneNumber, u.image, i.katagoriDetail from user u, instructor i where u.id=i.idUser and valid=1 and role=2 and katagori=${katagori}`;
   //console.log(q);
   con.query(q, (err, rows) => {
     if (err) throw err;
@@ -837,6 +837,10 @@ router.post("/finishClass", async (req, res) => {
     const q5 = `update hSubmission set status=3 where id=${idHSubmission}`;
 
     const updateHSubmission = await query(q5);
+
+    const q6 = `update hSubmission set timeUpdate=now() where id=${idHSubmission}`;
+
+    const updateTimeUpdate = await query(q6);
   }
 
   const gaji = dataClass[0].price / dataClass[0].classCount;
