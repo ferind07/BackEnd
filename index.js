@@ -189,6 +189,23 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("share screen", (payload) => {
+    console.log("share screen to " + payload.to);
+    io.to(payload.to).emit("reciveShareScreen", {
+      signal: payload.signal,
+      from: socket.id,
+    });
+  });
+
+  socket.on("return share screen signal", (payload) => {
+    const signal = payload.signal;
+    const to = payload.to;
+
+    io.to(to).emit("receiving returned share screen signal", {
+      signal: signal,
+    });
+  });
+
   socket.on("login", (data) => {
     try {
       var decoded = jwt.verify(data.token, "217116596");
