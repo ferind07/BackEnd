@@ -197,6 +197,11 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("stop share screen", (payload) => {
+    console.log("stop share screen to " + payload.to);
+    io.to(payload.to).emit("share screen stopped");
+  });
+
   socket.on("return share screen signal", (payload) => {
     const signal = payload.signal;
     const to = payload.to;

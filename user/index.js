@@ -1393,6 +1393,41 @@ router.post("/giveReview", (req, res) => {
   }
 });
 
+router.post("/changePassword", (req, res) => {
+  const currentPassword = req.body.currentPassword;
+  const newPassword = req.body.newPassword;
+  const token = req.body.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select * from user where id=${decoded.id}`;
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      const password = rows[0].password;
+      const currPassword = SHA256(currentPassword).toString();
+      if (password == currPassword) {
+        const q2 = `update user set password=${newPassword} where id=${decoded.id}`;
+        con.query(q2, (err2, rows2) => {
+          if (err2) throw err2;
+          if (rows2.affectedRows == 1) {
+            res.send({
+              status: true,
+              msg: "success change password",
+            });
+          }
+        });
+      } else {
+        res.send({
+          status: false,
+          msg: "Current password didn't match",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 router.post("/invoicesPaid", (req, res) => {
   const id = req.body.id;
   res.send(id);
