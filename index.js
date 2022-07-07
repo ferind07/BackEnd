@@ -114,7 +114,12 @@ app.post("/joinRoom", (req, res) => {
     if (obj) {
       //obj.socketID.push(userData[decoded.id]);
       console.log(obj);
-      res.send({ status: true, msg: "Join to room" });
+
+      if (obj.socketID.length >= 2) {
+        res.send({ status: false, msg: "Unable to join room" });
+      } else {
+        res.send({ status: true, msg: "Join to room" });
+      }
     } else {
       res.send({ status: false, msg: "Room doesn't created yet" });
     }
