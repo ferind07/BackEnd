@@ -12,7 +12,8 @@ const nodeMailer = require("nodemailer");
 var jwt = require("jsonwebtoken");
 const util = require("util");
 const moment = require("moment");
-const midtransClient = require("midtrans-client");
+var uuid = require("uuid");
+const Xendit = require("xendit-node");
 // Create Snap API instance
 
 //xendit payment
@@ -99,20 +100,23 @@ async function sendEmail() {
   });
 }
 
-async function sendEmailForgetPassword(email, res) {
+async function sendEmailForgetPassword(email, res, newPass) {
   const transporter = nodeMailer.createTransport({
     service: "gmail",
     auth: {
       user: "ferryindra007@gmail.com",
-      pass: "Surabaya",
+      pass: "utbiwqtobvulevci",
     },
   });
 
   var mailOptions = {
     from: "ferryindra007@gmail.com",
     to: `${email}`,
-    subject: "Sending Email using Node.js",
-    html: await readFile("./user/email.html", "utf8"),
+    subject: "T-DEMY new password",
+    text:
+      "New password for T-DEMY is " +
+      newPass +
+      " please change to new password",
   };
 
   await transporter.sendMail(mailOptions, function (error, info) {
@@ -126,9 +130,51 @@ async function sendEmailForgetPassword(email, res) {
   });
 }
 
+async function sendEmailRegister(email, res, id) {
+  const transporter = nodeMailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "ferryindra007@gmail.com",
+      pass: "utbiwqtobvulevci",
+    },
+  });
+
+  var url = process.env.URL + id;
+
+  var mailOptions = {
+    from: "ferryindra007@gmail.com",
+    to: `${email}`,
+    subject: "T-DEMY activation account",
+    html: `<p>Click <a href=${url}>here</a> to activate your account</p>`,
+  };
+
+  await transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      console.log(error);
+      res.send(error);
+      res.send({ status: false, msg: error });
+    } else {
+      console.log("Email sent: " + info.response);
+      res.send({ status: true, msg: "Please check your email" });
+    }
+  });
+}
+
 router.post("/forgetPassword", (req, res) => {
   const email = req.body.email;
-  sendEmailForgetPassword(email, res);
+
+  const newPass = Math.floor(100000 + Math.random() * 900000);
+
+  const hash = SHA256(newPass).toString();
+  const q = `upadate user set password='${hash}' where email='${email}'`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+
+    if (rows.affectedRows == 1) {
+      sendEmailForgetPassword(email, res, newPass);
+    }
+  });
 });
 
 async function usePooledConnectionAsync(actionAsync) {
@@ -172,24 +218,28 @@ router.post("/login", async (req, res) => {
     } else {
       const data = rows[0];
       if (data.status != 0) {
-        const token = jwt.sign(
-          {
-            id: data.id,
-            email: data.email,
-            role: data.role,
-            name: data.name,
-            phoneNumber: data.phoneNumber,
-          },
+        if (data.status == 3) {
+          res.status(201).send({ msg: "Please activate your account" });
+        } else {
+          const token = jwt.sign(
+            {
+              id: data.id,
+              email: data.email,
+              role: data.role,
+              name: data.name,
+              phoneNumber: data.phoneNumber,
+            },
 
-          "217116596"
-        );
-        res.status(200).send({
-          msg: "Success login",
-          token: token,
-          id: data.id,
-          role: data.role,
-          status: data.status,
-        });
+            "217116596"
+          );
+          res.status(200).send({
+            msg: "Success login",
+            token: token,
+            id: data.id,
+            role: data.role,
+            status: data.status,
+          });
+        }
       } else {
         res.status(201).send({ msg: "User banned" });
       }
@@ -221,14 +271,31 @@ router.post("/register", async (req, res) => {
         }
 
         if (rows.affectedRows == 1) {
-          res.status(200).send({
-            msg: "Success register " + email,
-          });
+          // res.status(200).send({
+          //   msg: "Success register " + email,
+          // });
+          sendEmailRegister(email, res, rows.insertId);
         }
       });
     } else {
       res.status(400).send({
         msg: "Fail email already registered",
+      });
+    }
+  });
+});
+
+router.post("/activeUser", (req, res) => {
+  const id = req.body.id;
+
+  const q = `update user set status=1 where id=${id}`;
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+
+    if (rows.affectedRows == 1) {
+      res.send({
+        status: true,
+        msg: "Activation success",
       });
     }
   });
@@ -536,7 +603,7 @@ async function checkSubmission(idUser, idInstructor, dateStart, dateEnd) {
     `select * from submission where ` +
     `('${dateStart}' between dateStart and dateEnd or ` +
     `'${dateEnd}' between dateStart and dateEnd or ` +
-    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}')) and (idUser=${idUser} or idInstructor=${idInstructor});`;
+    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}')) and (idUser=${idUser} or idInstructor=${idInstructor}) and status != 3;`;
   const hasil = await query(q);
   return hasil;
 }
@@ -582,7 +649,7 @@ router.post("/submissionClass", async (req, res) => {
     if (!intersec) {
       //res.send("tidak ada jadwal menumpuk");
 
-      const qHSubmission = `INSERT INTO hSubmission (id, idUser, idInstructor, idClass, status) VALUES (NULL, ${idUser}, ${idInstructor}, ${idClass}, 0);`;
+      const qHSubmission = `INSERT INTO hSubmission (id, idUser, idInstructor, idClass, status) VALUES (NULL, ${idUser}, ${idInstructor}, ${idClass}, 5);`;
 
       const hasilHSubmission = await query(qHSubmission);
 
@@ -961,7 +1028,7 @@ router.get("/getSchedule", (req, res) => {
     var q = ``;
     if (decoded.role == 1) {
       q =
-        `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
+        `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id, h.linkPayment ` +
         `from hSubmission h, user u, instructor i, class c ` +
         `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and u.id = ${decoded.id}`;
     } else {
@@ -1045,94 +1112,94 @@ router.post("/postReview", (req, res) => {
   }
 });
 
-router.post("/userPay", (req, res) => {
-  const order_id = req.body.order_id;
-  const gross_amount = req.body.gross_amount;
-  console.log(order_id);
-  const token = req.body.token;
-  //console.log(token);
-  try {
-    var decoded = jwt.verify(token, "217116596");
-    let snap = new midtransClient.Snap({
-      // Set to true if you want Production Environment (accept real transaction).
-      isProduction: false,
-      serverKey: "SB-Mid-server-XESumlYA6kMhu4f4yT8KLauT",
-    });
+// router.post("/userPay", (req, res) => {
+//   const order_id = req.body.order_id;
+//   const gross_amount = req.body.gross_amount;
+//   console.log(order_id);
+//   const token = req.body.token;
+//   //console.log(token);
+//   try {
+//     var decoded = jwt.verify(token, "217116596");
+//     let snap = new midtransClient.Snap({
+//       // Set to true if you want Production Environment (accept real transaction).
+//       isProduction: false,
+//       serverKey: "SB-Mid-server-XESumlYA6kMhu4f4yT8KLauT",
+//     });
 
-    let parameter = {
-      transaction_details: {
-        order_id: order_id,
-        gross_amount: gross_amount,
-      },
-      credit_card: {
-        secure: true,
-      },
-      customer_details: {
-        first_name: decoded.name,
-        email: decoded.email,
-        phone: decoded.phoneNumber,
-      },
-    };
+//     let parameter = {
+//       transaction_details: {
+//         order_id: order_id,
+//         gross_amount: gross_amount,
+//       },
+//       credit_card: {
+//         secure: true,
+//       },
+//       customer_details: {
+//         first_name: decoded.name,
+//         email: decoded.email,
+//         phone: decoded.phoneNumber,
+//       },
+//     };
 
-    snap.createTransaction(parameter).then((transaction) => {
-      // transaction token
-      let transactionToken = transaction.token;
+//     snap.createTransaction(parameter).then((transaction) => {
+//       // transaction token
+//       let transactionToken = transaction.token;
 
-      console.log(transactionToken);
-      res.send(transactionToken);
-    });
-  } catch (error) {
-    console.log(error);
-  }
-});
+//       console.log(transactionToken);
+//       res.send(transactionToken);
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// });
 
-router.post("/finishPayment", (req, res) => {
-  const token = req.body.token;
+// router.post("/finishPayment", (req, res) => {
+//   const token = req.body.token;
 
-  try {
-    var decoded = jwt.verify(token, "217116596");
-    const order_id = req.body.order_id;
-    const transaction_id = req.body.transaction_id;
-    const transaction_type = req.body.transaction_type;
-    const transaction_status_code = req.body.transaction_status_code;
-    const transaction_hSubmission_id = req.body.transaction_hSubmission_id;
-    const transaction_time = req.body.transaction_time;
+//   try {
+//     var decoded = jwt.verify(token, "217116596");
+//     const order_id = req.body.order_id;
+//     const transaction_id = req.body.transaction_id;
+//     const transaction_type = req.body.transaction_type;
+//     const transaction_status_code = req.body.transaction_status_code;
+//     const transaction_hSubmission_id = req.body.transaction_hSubmission_id;
+//     const transaction_time = req.body.transaction_time;
 
-    const q =
-      `INSERT INTO transaction (order_id, transaction_code, transaction_type, transaction_status_code, transaction_hSubmission_id, transaction_time, transaction_user_id) ` +
-      `VALUES ('${order_id}', '${transaction_id}', '${transaction_type}', ${transaction_status_code}, ${transaction_hSubmission_id}, '${transaction_time}', ${decoded.id})`;
+//     const q =
+//       `INSERT INTO transaction (order_id, transaction_code, transaction_type, transaction_status_code, transaction_hSubmission_id, transaction_time, transaction_user_id) ` +
+//       `VALUES ('${order_id}', '${transaction_id}', '${transaction_type}', ${transaction_status_code}, ${transaction_hSubmission_id}, '${transaction_time}', ${decoded.id})`;
 
-    con.query(q, (err, rows) => {
-      if (err) throw err;
-      if (rows.affectedRows == 1) {
-        res.send({
-          status: true,
-          msg: "Success add transaction",
-        });
-      }
-    });
-  } catch (error) {
-    console.log(error);
-  }
-});
+//     con.query(q, (err, rows) => {
+//       if (err) throw err;
+//       if (rows.affectedRows == 1) {
+//         res.send({
+//           status: true,
+//           msg: "Success add transaction",
+//         });
+//       }
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// });
 
-router.post("/unFinishedPayment", (req, res) => {
-  const insertId = req.body.insertId;
+// router.post("/unFinishedPayment", (req, res) => {
+//   const insertId = req.body.insertId;
 
-  const q1 = `delete from hsubmission where id=${insertId}`;
+//   const q1 = `delete from hsubmission where id=${insertId}`;
 
-  con.query(q1, (err, rows) => {
-    if (err) throw err;
-    const q2 = `delete from submission where idHsubmission=${insertId}`;
-    con.query(q2, (err2, rows2) => {
-      if (err2) throw err2;
-      res.send({
-        status: true,
-        msg: "Success process unfinished payment",
-      });
-    });
-  });
-});
+//   con.query(q1, (err, rows) => {
+//     if (err) throw err;
+//     const q2 = `delete from submission where idHsubmission=${insertId}`;
+//     con.query(q2, (err2, rows2) => {
+//       if (err2) throw err2;
+//       res.send({
+//         status: true,
+//         msg: "Success process unfinished payment",
+//       });
+//     });
+//   });
+// });
 
 router.post("/deleteClass", (req, res) => {
   const idClass = req.body.idClass;
@@ -1148,7 +1215,6 @@ router.post("/deleteClass", (req, res) => {
   });
 });
 
-const Xendit = require("xendit-node");
 const x = new Xendit({
   secretKey:
     "xnd_development_gZ6UwlJq2YDJg9U046XEA91ueFkMsjCjWa0boSgIXE2Lygo6ko3zadK0l6gXw",
@@ -1172,7 +1238,14 @@ router.post("/xenditPAY", async (req, res) => {
       payerEmail: decoded.email,
       description: "Payment for T-DEMY",
     });
-    console.log(resp);
+    const q = `update hSubmission set linkPayment='${resp.invoice_url}' where id=${id}`;
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        console.log("success");
+      }
+    });
+    //console.log(resp);
     res.send(resp);
   } catch (error) {
     console.log(error);
@@ -1341,7 +1414,7 @@ router.get("/getHSubmissionDone", (req, res) => {
   try {
     var decoded = jwt.verify(token, "217116596");
 
-    const q = `select h.id, h.timeInsert, i.name, c.image, c.title, c.price, i.idUser from hSubmission h, class c, instructor i where h.idClass = c.id and h.idInstructor = i.idUser and h.idUser = ${decoded.id}`;
+    const q = `select h.id, h.timeInsert, i.name, c.image, c.title, c.price, i.idUser from hSubmission h, class c, instructor i where h.idClass = c.id and h.idInstructor = i.idUser and h.idUser = ${decoded.id} and h.status=3`;
 
     con.query(q, (err, rows) => {
       if (err) throw err;
@@ -1430,7 +1503,44 @@ router.post("/changePassword", (req, res) => {
 
 router.post("/invoicesPaid", (req, res) => {
   const id = req.body.id;
-  res.send(id);
+  const amount = req.body.amount;
+  const status = req.body.status;
+  const created_at = moment(req.body.created).format("YYYY-MM-DD HH:mm:ss");
+  const paid_at = moment(req.body.paid_at).format("YYYY-MM-DD HH:mm:ss");
+  const updated = moment(req.body.updated).format("YYYY-MM-DD HH:mm:ss");
+  const bank_code = req.body.bank_code;
+  const payer_email = req.body.payer_email;
+  const external_id = req.body.external_id + "";
+
+  const external_idArr = external_id.split("_");
+  console.log(external_idArr[1]);
+
+  const q = `INSERT INTO transaction (id, amount, status, created_at, paid_at, updated, bank_code, payer_email, external_id) VALUES ('${id}', ${amount}, '${status}', '${created_at}', '${paid_at}', '${updated}', '${bank_code}', '${payer_email}', '${external_idArr[1]}')`;
+
+  con.query(q, (err, rows) => {
+    if (err) console.log(err);
+  });
+  if (status == "PAID") {
+    const qUpdateHSubmission = `update hSubmission set status=0 where id=${external_idArr[1]}`;
+    con.query(qUpdateHSubmission, (err, rows) => {
+      if (err) throw err;
+
+      res.send(rows);
+    });
+  } else if (status == "EXPIRED") {
+    const qUpdateHSubmission = `update hSubmission set status=4 where id=${external_idArr[1]}`;
+    con.query(qUpdateHSubmission, (err, rows) => {
+      if (err) throw err;
+
+      const qUpdateSubmission = `update submission set status=3 where idHsubmission=${external_idArr[1]}`;
+
+      con.query(qUpdateSubmission, (err2, rows2) => {
+        if (err2) throw err2;
+
+        res.send(rows2);
+      });
+    });
+  }
 });
 
 module.exports = router;

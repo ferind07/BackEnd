@@ -1,5 +1,5 @@
 var mysql = require("mysql");
-
+require("dotenv").config();
 // var con = mysql.createConnection({
 //   host: "localhost",
 //   user: "root",
@@ -27,19 +27,19 @@ var mysql = require("mysql");
 //   console.log(error);
 // }
 
-var con = mysql.createPool({
-  host: "103.145.226.115",
-  user: "ferryind_ferry",
-  password: "ferry123",
-  database: "ferryind_skripsi",
-});
-
 // var con = mysql.createPool({
-//   host: "localhost",
-//   user: "root",
-//   password: "",
-//   database: "skripsi",
+//   host: "103.145.226.115",
+//   user: "ferryind_ferry",
+//   password: "ferry123",
+//   database: "ferryind_skripsi",
 // });
+
+var con = mysql.createPool({
+  host: process.env.HOST,
+  user: process.env.DB_USER,
+  password: process.env.PASSWORD,
+  database: process.env.DATABASE,
+});
 
 // con.connect(function (err) {
 //   if (err) console.log(err);
