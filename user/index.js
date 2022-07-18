@@ -334,7 +334,7 @@ router.get("/getInstructorInfo", (req, res) => {
 
 router.get("/getInstructorDetail", (req, res) => {
   const id = req.query.id;
-  const q = `select u.name, u.phoneNumber, u.image, i.katagoriDetail, i.berkas, i.instructorDetail, u.email, i.katagori, i.timeStart, i.timeEnd from instructor i, user u where i.idUser=u.id and u.id=${id}`;
+  const q = `select u.name, u.phoneNumber, u.image, i.katagoriDetail, i.berkas, i.instructorDetail, u.email, i.katagori, i.timeStart, i.timeEnd, i.activeDays from instructor i, user u where i.idUser=u.id and u.id=${id}`;
   con.query(q, (err, rows) => {
     if (err) throw err;
     //console.log(rows[0]);
@@ -349,12 +349,16 @@ router.post("/registerInstructor", uploadBerkas, (req, res) => {
   const detail = req.body.detail;
   const timeStart = moment(req.body.timeStart).format("HH:mm:ss");
   const timeEnd = moment(req.body.timeEnd).format("HH:mm:ss");
-
+  const availableDay = req.body.availableDay;
   try {
     const file = req.file;
     const lokasi = `/public/uploads/berkas/${file.filename}`;
     var decoded = jwt.verify(token, "217116596");
-    const q = `INSERT INTO instructor (idUser, name, instructorDetail, katagori, katagoriDetail, valid, berkas, timeStart, timeEnd) VALUES (${decoded.id}, '${decoded.name}', '${detail}', ${katagori}, '${katagoriDetail}', 0, '${lokasi}', '${timeStart}', '${timeEnd}')`;
+    const q = `INSERT INTO instructor (idUser, name, instructorDetail, katagori, katagoriDetail, valid, berkas, timeStart, timeEnd, activeDays) VALUES (${
+      decoded.id
+    }, '${
+      decoded.name
+    }', '${detail}', ${katagori}, '${katagoriDetail}', 0, '${lokasi}', '${timeStart}', '${timeEnd}', '${availableDay.toString()}')`;
     //console.log(q);
     //console.log(decoded);
     con.query(q, (err, rows) => {
@@ -430,6 +434,8 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
   const timeStart = moment(req.body.timeStart).format("HH:mm");
   const timeEnd = moment(req.body.timeEnd).format("HH:mm");
   const file = req.file;
+  const activeDays = req.body.activeDays;
+
   //console.log(token);
   if (file) {
     //ada gambar
@@ -444,7 +450,9 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
       //   timeEnd
       // );
 
-      const qIns = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}' where idUser=${decoded.id}`;
+      const qIns = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}', activeDays='${activeDays.toString()}' where idUser=${
+        decoded.id
+      }`;
       console.log(qIns);
       con.query(qIns, (err, rows) => {
         if (err) throw err;
@@ -469,7 +477,9 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
       var decoded = jwt.verify(token, "217116596");
 
       const query = util.promisify(con.query).bind(con);
-      const q1 = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}' where idUser=${decoded.id}`;
+      const q1 = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}', activeDays='${activeDays.toString()}' where idUser=${
+        decoded.id
+      }`;
       console.log(q1);
       const hasil = await query(q1);
 
@@ -603,7 +613,7 @@ async function checkSubmission(idUser, idInstructor, dateStart, dateEnd) {
     `select * from submission where ` +
     `('${dateStart}' between dateStart and dateEnd or ` +
     `'${dateEnd}' between dateStart and dateEnd or ` +
-    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}')) and (idUser=${idUser} or idInstructor=${idInstructor}) and status != 3;`;
+    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}')) and (idUser=${idUser} or idInstructor=${idInstructor}) and status != 3 and status != 2;`;
   const hasil = await query(q);
   return hasil;
 }
@@ -627,14 +637,14 @@ router.post("/submissionClass", async (req, res) => {
     let intersecDate = [];
 
     for (let index = 0; index < dateStart.length; index++) {
-      intersecDate.push(
-        await checkSubmission(
-          idUser,
-          idInstructor,
-          dateStart[index],
-          dateEnd[index]
-        )
+      const data = await checkSubmission(
+        idUser,
+        idInstructor,
+        dateStart[index],
+        dateEnd[index]
       );
+      console.log(data);
+      intersecDate.push(data);
     }
 
     let intersec = false;
@@ -1026,6 +1036,7 @@ router.get("/getSchedule", (req, res) => {
   try {
     var decoded = jwt.verify(token, "217116596");
     var q = ``;
+    //console.log(decoded);
     if (decoded.role == 1) {
       q =
         `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id, h.linkPayment ` +
@@ -1035,7 +1046,7 @@ router.get("/getSchedule", (req, res) => {
       q =
         `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
         `from hSubmission h, user u, instructor i, class c ` +
-        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and i.idUser = ${decoded.id}`;
+        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and h.status != 5 and i.idUser = ${decoded.id}`;
     }
     //console.log(q);
     con.query(q, (err, rows) => {
