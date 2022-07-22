@@ -498,10 +498,13 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
 router.post("/addClass", uploadClassImage, (req, res) => {
   const token = req.body.token;
   const title = req.body.title;
-  const detail = req.body.detail;
+  let detail = req.body.detail + "";
   const duration = req.body.duration;
   const price = req.body.price;
   const classCount = req.body.classCount;
+
+  detail = detail.replaceAll("'", ``);
+  detail = detail.replaceAll('"', ``);
 
   try {
     var decoded = jwt.verify(token, "217116596");
@@ -1091,7 +1094,8 @@ router.get("/getReview", (req, res) => {
 
 router.get("/getReviewByID", (req, res) => {
   const idInstructor = req.query.id;
-  const q = `select * from review r, user u where idTo = ${idInstructor} and r.idFrom = u.id`;
+  const q = `select u.name, r.rating, r.comment, c.title from review r, user u, hSubmission h, class c where idTo = ${idInstructor} and r.idFrom = u.id and h.id=r.idHSubmission and h.idClass=c.id`;
+  console.log(q);
   con.query(q, (err, rows) => {
     if (err) throw err;
     res.send(rows);
@@ -1552,6 +1556,18 @@ router.post("/invoicesPaid", (req, res) => {
       });
     });
   }
+});
+
+router.get("/instructorSchedule", (req, res) => {
+  const idInstructor = req.query.id;
+
+  const q = `select * from submission where idInstructor=${idInstructor} and status=1`;
+  //console.log(q);
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
 });
 
 module.exports = router;
