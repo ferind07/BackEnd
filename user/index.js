@@ -208,11 +208,9 @@ router.post("/login", async (req, res) => {
   const password = req.body.password;
   const hash = SHA256(password).toString();
   const q = `select * from user where email='${email}' and password='${hash}'`;
-  //console.log(q);
 
   con.query(q, (err, rows) => {
     if (err) throw err;
-    //res.send(rows);
     if (rows.length == 0) {
       res.status(201).send({ msg: "Wrong email/password" });
     } else {
@@ -257,13 +255,11 @@ router.post("/register", async (req, res) => {
   const q = `select * from user where email='${email}'`;
   con.query(q, (err, rows) => {
     if (err) throw err;
-    //console.log(rows.length);
     if (rows.length == 0) {
       const hash = SHA256(password).toString();
       const q =
         `INSERT INTO user (id, email, password, name, phoneNumber, role) VALUES` +
         `(NULL, '${email}', '${hash}', '${name}', '${phoneNumber}', ${role})`;
-      //console.log(q);
       con.query(q, (err, rows) => {
         if (err) {
           console.log(err);
@@ -271,9 +267,6 @@ router.post("/register", async (req, res) => {
         }
 
         if (rows.affectedRows == 1) {
-          // res.status(200).send({
-          //   msg: "Success register " + email,
-          // });
           sendEmailRegister(email, res, rows.insertId);
         }
       });
@@ -702,7 +695,7 @@ router.get("/getSubmission", (req, res) => {
   try {
     const decoded = jwt.verify(token, "217116596");
     const q =
-      `select s.id, c.title, u.name, s.dateStart, s.dateEnd, s.idUser, s.status ` +
+      `select s.id, c.title, u.name, s.dateStart, s.dateEnd, s.idUser, s.status, c.id as idClass ` +
       `from submission s, user u, class c ` +
       `where s.idInstructor=${decoded.id} and u.id=s.idUser and s.idClass=c.id and s.idHsubmission=${id}`;
     con.query(q, (err, rows) => {
@@ -1260,7 +1253,6 @@ router.post("/xenditPAY", async (req, res) => {
         console.log("success");
       }
     });
-    //console.log(resp);
     res.send(resp);
   } catch (error) {
     console.log(error);
@@ -1567,6 +1559,16 @@ router.get("/instructorSchedule", (req, res) => {
   con.query(q, (err, rows) => {
     if (err) throw err;
     res.send(rows);
+  });
+});
+
+router.get("/getUser", (req, res) => {
+  const id = req.query.id;
+
+  const q = `select * from user where id=${id}`;
+
+  con.query(q, (err, rows) => {
+    res.send(rows[0]);
   });
 });
 

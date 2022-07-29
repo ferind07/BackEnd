@@ -112,7 +112,6 @@ app.post("/joinRoom", (req, res) => {
     const obj = room[roomID];
 
     if (obj) {
-      //obj.socketID.push(userData[decoded.id]);
       console.log(obj);
 
       if (obj.socketID.length >= 2) {

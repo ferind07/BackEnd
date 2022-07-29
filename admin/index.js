@@ -86,7 +86,6 @@ router.post("/banUser", (req, res) => {
   } else {
     q = `update user set status=1 where id=${idUser}`;
   }
-  //console.log(q);
   con.query(q, (err, rows) => {
     if (err) throw err;
     if (rows.affectedRows == 1) {
