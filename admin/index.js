@@ -234,4 +234,13 @@ router.get("/getIncomeData", (req, res) => {
   });
 });
 
+router.get("/getHSubmission", (req, res) => {
+  const q = `select * from hSubmission`;
+
+  con.query(q, (err, rows) => {
+    console.log(rows);
+    res.send(rows);
+  });
+});
+
 module.exports = router;

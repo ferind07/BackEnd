@@ -163,18 +163,33 @@ async function sendEmailRegister(email, res, id) {
 router.post("/forgetPassword", (req, res) => {
   const email = req.body.email;
 
-  const newPass = Math.floor(100000 + Math.random() * 900000);
-
-  const hash = SHA256(newPass).toString();
-  const q = `upadate user set password='${hash}' where email='${email}'`;
-
-  con.query(q, (err, rows) => {
-    if (err) throw err;
-
-    if (rows.affectedRows == 1) {
-      sendEmailForgetPassword(email, res, newPass);
+  const qq = `select * from user where email='${email}'`;
+  let valid = false;
+  con.query(qq, (err, rows) => {
+    if (rows.length > 0) {
+      valid = true;
     }
   });
+
+  if (valid) {
+    const newPass = Math.floor(100000 + Math.random() * 900000);
+
+    const hash = SHA256(newPass).toString();
+    const q = `upadate user set password='${hash}' where email='${email}'`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+
+      if (rows.affectedRows == 1) {
+        sendEmailForgetPassword(email, res, newPass);
+      }
+    });
+  } else {
+    res.send({
+      status: false,
+      msg: "Email not registered",
+    });
+  }
 });
 
 async function usePooledConnectionAsync(actionAsync) {
@@ -428,6 +443,7 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
   const timeEnd = moment(req.body.timeEnd).format("HH:mm");
   const file = req.file;
   const activeDays = req.body.activeDays;
+  const katagoriDetail = req.body.katagoriDetail;
 
   //console.log(token);
   if (file) {
@@ -443,7 +459,7 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
       //   timeEnd
       // );
 
-      const qIns = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}', activeDays='${activeDays.toString()}' where idUser=${
+      const qIns = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}', activeDays='${activeDays.toString()}', katagoriDetail='${katagoriDetail}' where idUser=${
         decoded.id
       }`;
       console.log(qIns);
@@ -470,7 +486,7 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
       var decoded = jwt.verify(token, "217116596");
 
       const query = util.promisify(con.query).bind(con);
-      const q1 = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}', activeDays='${activeDays.toString()}' where idUser=${
+      const q1 = `update instructor set instructorDetail='${detail}', timeStart='${timeStart}', timeEnd='${timeEnd}', activeDays='${activeDays.toString()}', katagoriDetail='${katagoriDetail}' where idUser=${
         decoded.id
       }`;
       console.log(q1);
@@ -485,6 +501,25 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
       console.log(error);
       res.send(error);
     }
+  }
+});
+
+router.post("/updateBerkas", uploadBerkas, async (req, res) => {
+  const token = req.body.token;
+  const file = req.file;
+  const lokasi = `/public/uploads/berkas/${file.filename}`;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `update instructor set berkas='${lokasi}' where idUser=${decoded.id}`;
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        res.send({ status: true, msg: "Success update document" });
+      }
+    });
+  } catch (error) {
+    console.log(error);
   }
 });
 
