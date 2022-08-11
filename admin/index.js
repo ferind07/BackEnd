@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const con = require("../skripsi_db_connection");
 var jwt = require("jsonwebtoken");
+const util = require("util");
 
 router.get("/allUser", (req, res) => {
   const q = `select id, email, name, phoneNumber, role, saldo, status from user where role != 3`;
@@ -234,6 +235,36 @@ router.get("/getIncomeData", (req, res) => {
   });
 });
 
+router.get("/getReport", (req, res) => {
+  const q = `select r.id, r.idUser, r.idSubmission, r.message, r.image, r.status, r.date, u.name, c.title, u.email, s.idInstructor from report r, user u, class c, submission s where r.idUser=u.id and r.idSubmission=s.id and s.idClass=c.id order by r.date desc`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
+router.get("/getReportByID", (req, res) => {
+  const id = req.query.id;
+  const q = `select r.id, r.idUser, r.idSubmission, r.message, r.image, r.status, r.date, u.name, c.title, u.email, s.idInstructor, s.idHsubmission, c.price from report r, user u, class c, submission s where r.idUser=u.id and r.idSubmission=s.id and s.idClass=c.id and r.id=${id}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows[0]);
+  });
+});
+
+router.get("/instructorInfo", (req, res) => {
+  const id = req.query.id;
+
+  const q = `select * from user u, instructor i where u.id=i.idUser and u.id=${id}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows[0]);
+  });
+});
+
 router.get("/getHSubmission", (req, res) => {
   const q = `select * from hSubmission`;
 
@@ -241,6 +272,141 @@ router.get("/getHSubmission", (req, res) => {
     console.log(rows);
     res.send(rows);
   });
+});
+
+router.post("/declineReport", async (req, res) => {
+  const idReport = req.body.idReport;
+  const idSubmission = req.body.idSubmission;
+  const idHSubmission = req.body.idHSubmission;
+
+  const query = util.promisify(con.query).bind(con);
+
+  const q1 = `update report set status=0 where id=${idReport}`;
+  const q2 = `update submission set status=2 where id=${idSubmission}`;
+  const q3 = `update hSubmission set status=1 where id=${idHSubmission}`;
+
+  const executeQ1 = await query(q1);
+  const executeQ2 = await query(q2);
+  const executeQ3 = await query(q3);
+
+  if (
+    executeQ1.affectedRows == 1 &&
+    executeQ2.affectedRows == 1 &&
+    executeQ3.affectedRows == 1
+  ) {
+    const q2 = `select * from submission where id=${idSubmission}`;
+
+    const dataSubmission = await query(q2);
+
+    // const q3 = `select * from class where id=${dataSubmission[0].idClass}`
+
+    // const dataClass = await query(q3);
+
+    // console.log(q2);
+    // console.log(dataSubmission);
+    const idHSubmission = dataSubmission[0].idHsubmission;
+    const idClass = dataSubmission[0].idClass;
+
+    // const checkClassDone = await checkClassDone(query, idClass, idHSubmission);
+    // const sendMoney = await sendMoney(query, idClass);
+    //finish class
+    //1. update status
+    //2. check class done
+    //3. send money
+
+    const q3 = `select * from class where id=${idClass}`;
+
+    const dataClass = await query(q3);
+
+    const classCount = dataClass[0].classCount;
+
+    const q4 = `select * from submission where idHsubmission=${idHSubmission} and status=2`;
+    const dataSubmissionDone = await query(q4);
+    console.log(q4);
+
+    if (dataSubmissionDone.length == classCount) {
+      console.log("kelas sudah selesai");
+
+      const q5 = `update hSubmission set status=3 where id=${idHSubmission}`;
+
+      const updateHSubmission = await query(q5);
+
+      const q6 = `update hSubmission set timeUpdate=now() where id=${idHSubmission}`;
+
+      const updateTimeUpdate = await query(q6);
+
+      const gaji = dataClass[0].price / dataClass[0].classCount;
+
+      const q7 = `select * from user where id=${dataClass[0].idInstructor}`;
+
+      const hasil2 = await query(q7);
+
+      const gajiInstructor = (gaji * 95) / 100;
+      const gajiAdmin = (gaji * 5) / 100;
+
+      const saldo = hasil2[0].saldo + gajiInstructor;
+
+      const q8 = `update user set saldo=${saldo} where id=${dataClass[0].idInstructor}`;
+
+      // const queryGajiAdmin = await sendMoneyToAdmin(query, gajiAdmin);
+
+      const hasil3 = await query(q8);
+
+      const q9 = `select * from user where role=3`;
+      const dataAdmin = await query(q9);
+
+      const saldoBaru = dataAdmin[0].saldo + gajiAdmin;
+
+      const q10 = `update user set saldo=${saldoBaru} where role=3`;
+      const updateSaldo = await query(q10);
+
+      res.send({
+        status: true,
+        msg: "Success decline report",
+      });
+    }
+  }
+});
+
+router.post("/approveReport", async (req, res) => {
+  const idReport = req.body.idReport;
+  const idSubmission = req.body.idSubmission;
+  const idHSubmission = req.body.idHSubmission;
+  const price = req.body.price;
+  const idUser = req.body.idUser;
+
+  const query = util.promisify(con.query).bind(con);
+
+  const q1 = `update report set status=1 where id=${idReport}`;
+  const q2 = `update submission set status=5 where id=${idSubmission}`;
+  const q3 = `update hSubmission set status=7 where id=${idHSubmission}`;
+
+  const executeQ1 = await query(q1);
+  const executeQ2 = await query(q2);
+  const executeQ3 = await query(q3);
+
+  if (
+    executeQ1.affectedRows == 1 &&
+    executeQ2.affectedRows == 1 &&
+    executeQ3.affectedRows == 1
+  ) {
+    const qUser = `select * from user where id=${idUser}`;
+    const executeQUser = await query(qUser);
+
+    const newSaldo = executeQUser[0].saldo + price;
+    console.log(newSaldo);
+    const qTambahSaldo = `update user set saldo=${newSaldo} where id=${idUser}`;
+    const executeTambahSaldo = await query(qTambahSaldo);
+
+    if (executeTambahSaldo.affectedRows == 1) {
+      res.send({
+        status: true,
+        msg: "Success approve report",
+      });
+    }
+  }
+
+  //kembalikan uang ke user
 });
 
 module.exports = router;

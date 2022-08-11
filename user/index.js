@@ -59,6 +59,18 @@ const diskStorageClassImage = multer.diskStorage({
   },
 });
 
+const diskStorageReport = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "../public/uploads/report"));
+  },
+  filename: function (req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
+  },
+});
+
 const uploadBerkas = multer({
   storage: diskStorageBerkas,
 }).single("berkas");
@@ -70,6 +82,10 @@ const uploadClassImage = multer({
 const uploadUserProfile = multer({
   storage: diskStorageUserProfile,
 }).single("userProfile");
+
+const uploadReport = multer({
+  storage: diskStorageReport,
+}).single("report");
 
 router.get("/", (req, res) => {
   res.send("hello user");
@@ -949,40 +965,48 @@ router.post("/finishClass", async (req, res) => {
     const q6 = `update hSubmission set timeUpdate=now() where id=${idHSubmission}`;
 
     const updateTimeUpdate = await query(q6);
+
+    const gaji = dataClass[0].price / dataClass[0].classCount;
+
+    const q7 = `select * from user where id=${dataClass[0].idInstructor}`;
+
+    const hasil2 = await query(q7);
+
+    const gajiInstructor = (gaji * 95) / 100;
+    const gajiAdmin = (gaji * 5) / 100;
+
+    const saldo = hasil2[0].saldo + gajiInstructor;
+
+    const q8 = `update user set saldo=${saldo} where id=${dataClass[0].idInstructor}`;
+
+    // const queryGajiAdmin = await sendMoneyToAdmin(query, gajiAdmin);
+
+    const hasil3 = await query(q8);
+
+    const q9 = `select * from user where role=3`;
+    const dataAdmin = await query(q9);
+
+    const saldoBaru = dataAdmin[0].saldo + gajiAdmin;
+
+    const q10 = `update user set saldo=${saldoBaru} where role=3`;
+    const updateSaldo = await query(q10);
+
+    res.send(updateSaldo);
+  } else {
+    res.send({
+      status: true,
+      msg: "Class not finished yet",
+    });
   }
-
-  const gaji = dataClass[0].price / dataClass[0].classCount;
-
-  const q6 = `select * from user where id=${dataClass[0].idInstructor}`;
-
-  const hasil2 = await query(q6);
-
-  const gajiInstructor = (gaji * 95) / 100;
-  const gajiAdmin = (gaji * 5) / 100;
-
-  const saldo = hasil2[0].saldo + gajiInstructor;
-
-  const q7 = `update user set saldo=${saldo} where id=${dataClass[0].idInstructor}`;
-
-  // const queryGajiAdmin = await sendMoneyToAdmin(query, gajiAdmin);
-
-  const hasil3 = await query(q7);
-
-  const q8 = `select * from user where role=3`;
-  const dataAdmin = await query(q8);
-
-  const saldoBaru = dataAdmin[0].saldo + gajiAdmin;
-
-  const q9 = `update user set saldo=${saldoBaru} where role=3`;
-  const updateSaldo = await query(q9);
-
-  res.send(updateSaldo);
 });
 
 router.post("/actionClass", async (req, res) => {
   const action = req.body.action;
   const token = req.body.token;
   const id = req.body.id;
+  const idUser = req.body.idUser;
+  const saldoUser = req.body.saldoUser;
+  const price = req.body.price;
 
   try {
     var decoded = jwt.verify(token, "217116596");
@@ -991,11 +1015,23 @@ router.post("/actionClass", async (req, res) => {
       const query = util.promisify(con.query).bind(con);
       let hasil = await query(q);
       console.log(hasil);
+
       if (hasil.affectedRows == 1) {
         let q2 = `update submission set status=${action} where idHsubmission=${id}`;
         const query2 = util.promisify(con.query).bind(con);
         let hasil2 = await query2(q2);
         //console.log(hasil2);
+
+        if (action == 2) {
+          //ins menolak kelas
+          const newSaldo = saldoUser + price;
+          const qKembali = `update user set saldo=${newSaldo} where id=${idUser}`;
+          const hasilKembaliUangUser = await query(qKembali);
+
+          const qIncome = `INSERT INTO income (id, idUser, idHsubmission, amount, type, date) VALUES (NULL, ${idUser}, ${id}, ${price}, 2, current_timestamp())`;
+          const hasilInsertIncome = await query(qIncome);
+        }
+
         if (hasil2.affectedRows > 0) {
           res.send({
             status: true,
@@ -1605,6 +1641,85 @@ router.get("/getUser", (req, res) => {
   con.query(q, (err, rows) => {
     res.send(rows[0]);
   });
+});
+
+router.post("/deleteProfilePic", (req, res) => {
+  const token = req.body.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `update user set image='' where id=${decoded.id}`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        res.send({
+          status: true,
+          msg: "Success delete profile picture",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.post("/submitReport", uploadReport, async (req, res) => {
+  const token = req.body.token;
+  const idSubmission = req.body.idSubmission;
+  const message = req.body.message;
+  const file = "/public/uploads/report/" + req.file.filename;
+
+  console.log(file);
+
+  const query = util.promisify(con.query).bind(con);
+  //console.log(token);
+  try {
+    var decoded = jwt.verify(token, "217116596");
+
+    const q = `INSERT INTO report (id, idUser, idSubmission, message, image, status) VALUES (NULL, ${decoded.id}, ${idSubmission}, '${message}', '${file}', 2)`;
+
+    const qSubmissionData = `select * from submission where id=${idSubmission}`;
+    const hasilQSubmission = await query(qSubmissionData);
+    const idHsubmission = hasilQSubmission[0].idHsubmission;
+
+    const qUpdateSubmission = `update submission set status=5 where id=${idSubmission}`;
+    const hasilUpdateSubmission = await query(qUpdateSubmission);
+
+    const qUpdateHSubmission = `update hSubmission set status=6 where id=${idHsubmission}`;
+    const executeQuery = await query(qUpdateHSubmission);
+
+    if (hasilUpdateSubmission.affectedRows == 1) {
+      con.query(q, (err, rows) => {
+        if (err) throw err;
+        if (rows.affectedRows == 1) {
+          res.send({
+            status: true,
+            msg: "Success submit report to admin",
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/getReport", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select r.id, r.idUser, r.idSubmission, r.message, r.image, r.status, r.date, u.name, c.title, u.email, s.idInstructor from report r, user u, class c, submission s, instructor i where s.idInstructor=u.id and i.idUser=u.id and r.idSubmission=s.id and s.idClass=c.id and r.idUser=${decoded.id} order by r.date desc`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 module.exports = router;

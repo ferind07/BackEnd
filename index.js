@@ -127,6 +127,22 @@ app.post("/joinRoom", (req, res) => {
   }
 });
 
+app.post("/insEndRoom", (req, res) => {
+  const idSubmission = req.body.idSubmission;
+
+  const q = `update submission set status=4 where id=${idSubmission}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    if (rows.affectedRows == 1) {
+      res.send({
+        status: true,
+        msg: "Success end room",
+      });
+    }
+  });
+});
+
 function createRoom(id, idUser, idInstructor) {
   // room.push({
   //   id: id,
