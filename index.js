@@ -287,6 +287,10 @@ io.on("connection", (socket) => {
     console.log(room);
     io.to(data.to).emit("goToResultPage");
   });
+
+  socket.on("shareScreenError", (data) => {
+    io.to(data.to).emit("partnerShareScreenError");
+  });
 });
 
 const PORT = process.env.PORT || 8000;

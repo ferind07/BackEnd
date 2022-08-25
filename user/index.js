@@ -1671,10 +1671,8 @@ router.post("/submitReport", uploadReport, async (req, res) => {
   const message = req.body.message;
   const file = "/public/uploads/report/" + req.file.filename;
 
-  console.log(file);
-
   const query = util.promisify(con.query).bind(con);
-  //console.log(token);
+  
   try {
     var decoded = jwt.verify(token, "217116596");
 

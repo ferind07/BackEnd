@@ -298,21 +298,8 @@ router.post("/declineReport", async (req, res) => {
 
     const dataSubmission = await query(q2);
 
-    // const q3 = `select * from class where id=${dataSubmission[0].idClass}`
-
-    // const dataClass = await query(q3);
-
-    // console.log(q2);
-    // console.log(dataSubmission);
     const idHSubmission = dataSubmission[0].idHsubmission;
     const idClass = dataSubmission[0].idClass;
-
-    // const checkClassDone = await checkClassDone(query, idClass, idHSubmission);
-    // const sendMoney = await sendMoney(query, idClass);
-    //finish class
-    //1. update status
-    //2. check class done
-    //3. send money
 
     const q3 = `select * from class where id=${idClass}`;
 
@@ -322,7 +309,6 @@ router.post("/declineReport", async (req, res) => {
 
     const q4 = `select * from submission where idHsubmission=${idHSubmission} and status=2`;
     const dataSubmissionDone = await query(q4);
-    console.log(q4);
 
     if (dataSubmissionDone.length == classCount) {
       console.log("kelas sudah selesai");
@@ -348,8 +334,6 @@ router.post("/declineReport", async (req, res) => {
 
       const q8 = `update user set saldo=${saldo} where id=${dataClass[0].idInstructor}`;
 
-      // const queryGajiAdmin = await sendMoneyToAdmin(query, gajiAdmin);
-
       const hasil3 = await query(q8);
 
       const q9 = `select * from user where role=3`;
@@ -359,12 +343,11 @@ router.post("/declineReport", async (req, res) => {
 
       const q10 = `update user set saldo=${saldoBaru} where role=3`;
       const updateSaldo = await query(q10);
-
-      res.send({
-        status: true,
-        msg: "Success decline report",
-      });
     }
+    res.send({
+      status: true,
+      msg: "Success decline report",
+    });
   }
 });
 
@@ -394,7 +377,6 @@ router.post("/approveReport", async (req, res) => {
     const executeQUser = await query(qUser);
 
     const newSaldo = executeQUser[0].saldo + price;
-    console.log(newSaldo);
     const qTambahSaldo = `update user set saldo=${newSaldo} where id=${idUser}`;
     const executeTambahSaldo = await query(qTambahSaldo);
 
@@ -405,8 +387,6 @@ router.post("/approveReport", async (req, res) => {
       });
     }
   }
-
-  //kembalikan uang ke user
 });
 
 module.exports = router;
