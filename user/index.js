@@ -1059,7 +1059,7 @@ router.get("/instructorEvent", (req, res) => {
   const token = req.query.token;
   try {
     var decoded = jwt.verify(token, "217116596");
-    const q = `select u.name, s.dateStart, s.dateEnd, s.status, c.title from submission s, class c, user u where s.idInstructor=${decoded.id} and s.status != 4 and c.id=s.idClass and u.id = s.idUser s.dateStart > now() order by s.dateStart asc`;
+    const q = `select u.name, s.dateStart, s.dateEnd, s.status, c.title from submission s, class c, user u where s.idInstructor=${decoded.id} and s.status != 4 and c.id=s.idClass and u.id = s.idUser and s.dateStart > now() order by s.dateStart asc`;
     //console.log(q);
     con.query(q, (err, rows) => {
       //console.log(rows);
