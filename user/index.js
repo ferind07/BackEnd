@@ -1059,7 +1059,7 @@ router.get("/instructorEvent", (req, res) => {
   const token = req.query.token;
   try {
     var decoded = jwt.verify(token, "217116596");
-    const q = `select u.name, s.dateStart, s.dateEnd, s.status, c.title from submission s, class c, user u where s.idInstructor=${decoded.id} and s.status != 4 and c.id=s.idClass and u.id = s.idUser order by s.dateStart`;
+    const q = `select u.name, s.dateStart, s.dateEnd, s.status, c.title from submission s, class c, user u where s.idInstructor=${decoded.id} and s.status != 4 and c.id=s.idClass and u.id = s.idUser s.dateStart > now() order by s.dateStart asc`;
     //console.log(q);
     con.query(q, (err, rows) => {
       //console.log(rows);
@@ -1108,7 +1108,7 @@ router.get("/getSchedule", (req, res) => {
       q =
         `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id, h.linkPayment ` +
         `from hSubmission h, user u, instructor i, class c ` +
-        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and u.id = ${decoded.id}`;
+        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and u.id = ${decoded.id} order by h.timeInsert desc`;
     } else {
       q =
         `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
@@ -1145,7 +1145,7 @@ router.get("/getReview", (req, res) => {
   try {
     var decoded = jwt.verify(token, "217116596");
 
-    const q = `select * from review r, user u where idTo=${decoded.id} and r.idFrom=u.id`;
+    const q = `select u.name, r.rating, r.comment, c.title, r.createAt from review r, user u, class c, hSubmission h where idTo=${decoded.id} and r.idFrom=u.id and r.idHSubmission=h.id and h.idClass = c.id order by r.createAt desc`;
 
     con.query(q, (err, rows) => {
       if (err) throw err;
@@ -1672,7 +1672,7 @@ router.post("/submitReport", uploadReport, async (req, res) => {
   const file = "/public/uploads/report/" + req.file.filename;
 
   const query = util.promisify(con.query).bind(con);
-  
+
   try {
     var decoded = jwt.verify(token, "217116596");
 
