@@ -3,6 +3,7 @@ const router = express.Router();
 const con = require("../skripsi_db_connection");
 var jwt = require("jsonwebtoken");
 const util = require("util");
+const moment = require("moment");
 
 router.get("/allUser", (req, res) => {
   const q = `select id, email, name, phoneNumber, role, saldo, status from user where role != 3`;
@@ -235,8 +236,117 @@ router.get("/getIncomeData", (req, res) => {
   });
 });
 
+function returnDatasetSales(data) {
+  const labelData = [];
+  const dataChart = [];
+  const color = [];
+
+  data.map((data) => {
+    labelData.push(data.monthName);
+    dataChart.push(data.sales);
+    color.push("#fff");
+  });
+
+  const eChart = {
+    series: [
+      {
+        name: "Sales",
+        data: dataChart,
+        color: "#fff",
+      },
+    ],
+
+    options: {
+      chart: {
+        type: "bar",
+        width: "100%",
+        height: "auto",
+
+        toolbar: {
+          show: false,
+        },
+      },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: "55%",
+          borderRadius: 5,
+        },
+      },
+      dataLabels: {
+        enabled: false,
+      },
+      stroke: {
+        show: true,
+        width: 1,
+        colors: ["transparent"],
+      },
+      grid: {
+        show: true,
+        borderColor: "#ccc",
+        strokeDashArray: 2,
+      },
+      xaxis: {
+        categories: labelData,
+        labels: {
+          show: true,
+          align: "right",
+          minWidth: 0,
+          maxWidth: 160,
+          style: {
+            colors: color,
+          },
+        },
+      },
+      yaxis: {
+        labels: {
+          show: true,
+          align: "right",
+          minWidth: 0,
+          maxWidth: 160,
+          style: {
+            colors: color,
+          },
+        },
+      },
+
+      tooltip: {
+        y: {
+          formatter: function (val) {
+            return "Rp. " + val + " thousands";
+          },
+        },
+      },
+    },
+  };
+
+  return eChart;
+}
+
+router.get("/getSales", (req, res) => {
+  const q =
+    `select MONTH(h.timeInsert) as month, MONTHNAME(h.timeInsert) as monthName, SUM(c.price) as sales ` +
+    `from hSubmission h, class c ` +
+    `where h.idClass=c.id and h.status=1 and h.timeInsert > DATE_SUB(now(), INTERVAL 6 MONTH) ` +
+    `GROUP BY MONTH(h.timeUpdate)`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
 router.get("/getReport", (req, res) => {
   const q = `select r.id, r.idUser, r.idSubmission, r.message, r.image, r.status, r.date, u.name, c.title, u.email, s.idInstructor from report r, user u, class c, submission s where r.idUser=u.id and r.idSubmission=s.id and s.idClass=c.id order by r.date desc`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
+router.get("/getNeedResponseReport", (req, res) => {
+  const q = `select r.id, r.idUser, r.idSubmission, r.message, r.image, r.status, r.date, u.name, c.title, u.email, s.idInstructor from report r, user u, class c, submission s where r.idUser=u.id and r.idSubmission=s.id and s.idClass=c.id and r.status=2 order by r.date desc`;
 
   con.query(q, (err, rows) => {
     if (err) throw err;

@@ -86,12 +86,19 @@ app.post("/createRoom", (req, res) => {
     if (decoded.role == 2) {
       const idInstructor = decoded.id;
 
-      createRoom(idSubmission, idUser, idInstructor);
-      console.log(room);
-      res.send({
-        status: true,
-        msg: "Success create ROOM",
-      });
+      if (!room[idSubmission]) {
+        createRoom(idSubmission, idUser, idInstructor);
+        console.log(room);
+        res.send({
+          status: true,
+          msg: "Success create ROOM",
+        });
+      } else {
+        res.send({
+          status: true,
+          msg: "Success join ROOM",
+        });
+      }
     } else {
       res.send({
         status: false,
@@ -144,12 +151,6 @@ app.post("/insEndRoom", (req, res) => {
 });
 
 function createRoom(id, idUser, idInstructor) {
-  // room.push({
-  //   id: id,
-  //   idUser: idUser,
-  //   idInstructor: idInstructor,
-  //   socketID: [],
-  // });
   room[id] = {
     id: id,
     idUser: idUser,
@@ -161,6 +162,7 @@ function createRoom(id, idUser, idInstructor) {
 const users = {};
 const userData = {};
 const room = {};
+const socketToRoom = {};
 
 io.on("connection", (socket) => {
   if (!users[socket.id]) {
@@ -189,6 +191,8 @@ io.on("connection", (socket) => {
       const usersInThisRoom = room[id].socketID.filter(
         (id) => id !== socket.id
       );
+      socketToRoom[socket.id] = id;
+      //console.log(socketToRoom);
       socket.emit("all users", usersInThisRoom);
     } else {
       console.log("room full");
@@ -247,6 +251,28 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     delete userData[users[socket.id]];
     delete users[socket.id];
+
+    console.log("disconnect");
+    console.log(room);
+    console.log(socketToRoom);
+    const roomID = socketToRoom[socket.id];
+    console.log(roomID);
+    console.log(users);
+    // const roomID = socketToRoom[socket.id];
+    // let room = users[roomID];
+
+    if (room[roomID]) {
+      var data = room[roomID].socketID.filter((id) => id !== socket.id);
+      room[roomID].socketID = data;
+    }
+    console.log(room[roomID]);
+
+    // if (room) {
+    //   room = room.filter((id) => id !== socket.id);
+    //   users[roomID] = room;
+    // }
+
+    socket.broadcast.emit("user left", socket.id);
 
     console.log(users);
     console.log(userData);
