@@ -176,7 +176,7 @@ router.get("/topInstructor", (req, res) => {
     `from hSubmission h, user u, instructor i, class c ` +
     `where h.idUser=u.id and h.status=3 and h.timeUpdate between '${dateStart}' and '${dateEnd}' and h.idInstructor=i.idUser and h.idClass=c.id ` +
     `group by h.idInstructor ` +
-    `order by 1 desc`;
+    `order by 2 desc`;
 
   const qq = `select * from (${q}) as t, user u where t.id=u.id`;
   console.log(qq);
