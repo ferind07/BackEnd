@@ -1720,4 +1720,18 @@ router.get("/getReport", (req, res) => {
   }
 });
 
+router.get("/getClassDetailByIDSubmission", (req, res) => {
+  const idSubmission = req.query.idSubmission;
+
+  const q =
+    "select c.title, c.image, s.dateStart, s.dateEnd " +
+    "from submission s, hSubmission h, class c " +
+    `where s.idHsubmission=h.id and h.idClass=c.id and s.id=${idSubmission}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
 module.exports = router;

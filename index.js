@@ -253,11 +253,11 @@ io.on("connection", (socket) => {
     delete users[socket.id];
 
     console.log("disconnect");
-    console.log(room);
-    console.log(socketToRoom);
+    // console.log(room);
+    // console.log(socketToRoom);
     const roomID = socketToRoom[socket.id];
-    console.log(roomID);
-    console.log(users);
+    // console.log(roomID);
+    // console.log(users);
     // const roomID = socketToRoom[socket.id];
     // let room = users[roomID];
 
@@ -265,7 +265,9 @@ io.on("connection", (socket) => {
       var data = room[roomID].socketID.filter((id) => id !== socket.id);
       room[roomID].socketID = data;
     }
+    console.log("room id");
     console.log(room[roomID]);
+    console.log(socket.id);
 
     // if (room) {
     //   room = room.filter((id) => id !== socket.id);
