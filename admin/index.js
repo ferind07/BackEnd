@@ -327,7 +327,7 @@ router.get("/getSales", (req, res) => {
   const q =
     `select MONTH(h.timeInsert) as month, MONTHNAME(h.timeInsert) as monthName, SUM(c.price) as sales ` +
     `from hSubmission h, class c ` +
-    `where h.idClass=c.id and h.status=1 and h.timeInsert > DATE_SUB(now(), INTERVAL 6 MONTH) ` +
+    `where h.idClass=c.id and h.timeInsert > DATE_SUB(now(), INTERVAL 6 MONTH) ` +
     `GROUP BY MONTH(h.timeInsert)`;
 
   con.query(q, (err, rows) => {
