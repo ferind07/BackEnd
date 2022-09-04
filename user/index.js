@@ -547,8 +547,8 @@ router.post("/addClass", uploadClassImage, (req, res) => {
   const price = req.body.price;
   const classCount = req.body.classCount;
 
-  detail = detail.replaceAll("'", ``);
-  detail = detail.replaceAll('"', ``);
+  detail = detail.toString().replaceAll("'", ``);
+  detail = detail.toString().replaceAll('"', ``);
 
   try {
     var decoded = jwt.verify(token, "217116596");
@@ -1289,7 +1289,21 @@ router.post("/deleteClass", (req, res) => {
     if (err) throw err;
     res.send({
       status: true,
-      msg: "Success delete class",
+      msg: "Success deactived class",
+    });
+  });
+});
+
+router.post("/activedClass", (req, res) => {
+  const idClass = req.body.idClass;
+
+  const q = `update class set status=1 where id=${idClass}`;
+  console.log(q);
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send({
+      status: true,
+      msg: "Success actived class",
     });
   });
 });
