@@ -356,7 +356,7 @@ router.get("/getNeedResponseReport", (req, res) => {
 
 router.get("/getReportByID", (req, res) => {
   const id = req.query.id;
-  const q = `select r.id, r.idUser, r.idSubmission, r.message, r.image, r.status, r.date, u.name, c.title, u.email, s.idInstructor, s.idHsubmission, c.price from report r, user u, class c, submission s where r.idUser=u.id and r.idSubmission=s.id and s.idClass=c.id and r.id=${id}`;
+  const q = `select r.id, r.idUser, r.idSubmission, r.message, r.image, r.status, r.date, u.name, c.title, u.email, s.idInstructor, s.idHsubmission, c.price, s.idClass from report r, user u, class c, submission s where r.idUser=u.id and r.idSubmission=s.id and s.idClass=c.id and r.id=${id}`;
 
   con.query(q, (err, rows) => {
     if (err) throw err;

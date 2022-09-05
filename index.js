@@ -333,9 +333,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("answerShareScreen", (payload) => {
-    io.to(payload.to).emit("answerShareScreen", payload);
+    console.log("answer share screen to " + payload.to);
+    console.log(payload.peerJSid);
+    io.to(payload.to).emit("answerShareScreen", { peerJSid: payload.peerJSid });
   });
-  socket.on("callShareScreen", (payload) => {});
+  socket.on("callShareScreen", (payload) => {
+    io.to(payload.to).emit("callShareScreen", {
+      from: payload.to,
+      peerJSid: payload.peerJSid,
+    });
+  });
+
+  socket.on("peerDestroy", (payload) => {
+    io.to(payload.to).emit("peerDestroy");
+  });
 });
 
 const { PeerServer } = require("peer");
