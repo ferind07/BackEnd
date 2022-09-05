@@ -335,6 +335,7 @@ io.on("connection", (socket) => {
   socket.on("answerShareScreen", (payload) => {
     io.to(payload.to).emit("answerShareScreen", payload);
   });
+  socket.on("callShareScreen", (payload) => {});
 });
 
 const { PeerServer } = require("peer");
