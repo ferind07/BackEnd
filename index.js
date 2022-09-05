@@ -22,13 +22,6 @@ app.get("/coba", (req, res) => {
 });
 
 const server = require("http").createServer(app);
-const { ExpressPeerServer } = require("peer");
-
-const peerServer = ExpressPeerServer(server, {
-  path: "/myapp",
-});
-
-app.use("/peerjs", peerServer);
 const io = require("socket.io")(server);
 
 // var CronJob = require("cron").CronJob;
