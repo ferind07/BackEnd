@@ -349,9 +349,13 @@ io.on("connection", (socket) => {
   });
 });
 
-const { PeerServer } = require("peer");
+const { ExpressPeerServer } = require("peer");
 
-const peerServer = PeerServer({ port: 9000, path: "/myapp" });
+const peerServer = ExpressPeerServer(server, {
+  path: "/myapp",
+});
+
+app.use("/peerjs", peerServer);
 
 const PORT = process.env.PORT || 8000;
 server.listen(8000, () => {
