@@ -7,7 +7,9 @@
     "start": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "engines": { "node": ">=18.3.0 <19" },
+  "engines": {
+    "node": ">=18.3.0 <19"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -27,6 +29,7 @@
     "node-schedule": "^2.1.0",
     "nodemailer": "^6.7.2",
     "nodemon": "^2.0.15",
+    "peer": "^0.6.1",
     "socket-io": "^1.0.0",
     "socket.io": "^4.4.1",
     "tedious": "^14.6.0",

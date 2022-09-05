@@ -319,7 +319,27 @@ io.on("connection", (socket) => {
   socket.on("shareScreenError", (data) => {
     io.to(data.to).emit("partnerShareScreenError");
   });
+
+  socket.on("offer", (payload) => {
+    io.to(payload.target).emit("offer", payload);
+  });
+
+  socket.on("answer", (payload) => {
+    io.to(payload.target.emit("answer", payload));
+  });
+
+  socket.on("ice-candidate", (incoming) => {
+    io.to(payload.target.emit("ice-candidate", incoming));
+  });
+
+  socket.on("answerShareScreen", (payload) => {
+    io.to(payload.to).emit("answerShareScreen", payload);
+  });
 });
+
+const { PeerServer } = require("peer");
+
+const peerServer = PeerServer({ port: 9000, path: "/myapp" });
 
 const PORT = process.env.PORT || 8000;
 server.listen(8000, () => {
