@@ -22,6 +22,13 @@ app.get("/coba", (req, res) => {
 });
 
 const server = require("http").createServer(app);
+const { ExpressPeerServer } = require("peer");
+
+const peerServer = ExpressPeerServer(server, {
+  path: "/myapp",
+});
+
+app.use("/peerjs", peerServer);
 const io = require("socket.io")(server);
 
 // var CronJob = require("cron").CronJob;
@@ -348,14 +355,6 @@ io.on("connection", (socket) => {
     io.to(payload.to).emit("peerDestroy");
   });
 });
-
-const { ExpressPeerServer } = require("peer");
-
-const peerServer = ExpressPeerServer(server, {
-  path: "/myapp",
-});
-
-app.use("/peerjs", peerServer);
 
 const PORT = process.env.PORT || 8000;
 server.listen(8000, () => {
