@@ -393,7 +393,7 @@ router.post("/declineReport", async (req, res) => {
 
   const q1 = `update report set status=0 where id=${idReport}`;
   const q2 = `update submission set status=2 where id=${idSubmission}`;
-  const q3 = `update hSubmission set status=1 where id=${idHSubmission}`;
+  const q3 = `update hSubmission set status=1, timeUpdate=now() where id=${idHSubmission}`;
 
   const executeQ1 = await query(q1);
   const executeQ2 = await query(q2);
@@ -472,7 +472,7 @@ router.post("/approveReport", async (req, res) => {
 
   const q1 = `update report set status=1 where id=${idReport}`;
   const q2 = `update submission set status=5 where id=${idSubmission}`;
-  const q3 = `update hSubmission set status=7 where id=${idHSubmission}`;
+  const q3 = `update hSubmission set status=7, timeUpdate=now() where id=${idHSubmission}`;
 
   const executeQ1 = await query(q1);
   const executeQ2 = await query(q2);

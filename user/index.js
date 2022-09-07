@@ -370,7 +370,9 @@ router.post("/registerInstructor", uploadBerkas, (req, res) => {
   const token = req.body.token;
   const katagori = req.body.katagori;
   const katagoriDetail = req.body.katagoriDetail;
-  const detail = req.body.detail;
+  var detail = req.body.detail + "";
+  detail = detail.toString().replaceAll("'", `\\'`);
+  detail = detail.toString().replaceAll('"', `\\"`);
   const timeStart = moment(req.body.timeStart).format("HH:mm:ss");
   const timeEnd = moment(req.body.timeEnd).format("HH:mm:ss");
   const availableDay = req.body.availableDay;
@@ -454,12 +456,15 @@ router.post("/updateInstructor", uploadUserProfile, async (req, res) => {
   const token = req.body.token;
   const name = req.body.name;
   const phone = req.body.phoneNumber;
-  const detail = req.body.detail;
+  var detail = req.body.detail + "";
   const timeStart = moment(req.body.timeStart).format("HH:mm");
   const timeEnd = moment(req.body.timeEnd).format("HH:mm");
   const file = req.file;
   const activeDays = req.body.activeDays;
   const katagoriDetail = req.body.katagoriDetail;
+
+  detail = detail.toString().replaceAll("'", `\\'`);
+  detail = detail.toString().replaceAll('"', `\\"`);
 
   //console.log(token);
   if (file) {
@@ -547,8 +552,8 @@ router.post("/addClass", uploadClassImage, (req, res) => {
   const price = req.body.price;
   const classCount = req.body.classCount;
 
-  detail = detail.toString().replaceAll("'", ``);
-  detail = detail.toString().replaceAll('"', ``);
+  detail = detail.toString().replaceAll("'", `\\'`);
+  detail = detail.toString().replaceAll('"', `\\"`);
 
   try {
     var decoded = jwt.verify(token, "217116596");
@@ -1746,6 +1751,32 @@ router.get("/getClassDetailByIDSubmission", (req, res) => {
     if (err) throw err;
     res.send(rows);
   });
+});
+
+router.get("/getIncome", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    var q = "";
+    if (decoded.role == 1) {
+      //role user
+      q = `select h.timeUpdate as time, c.price as amount from hSubmission h, class c where h.idClass=c.id and h.status=7 and h.idUser=${decoded.id} order by 1 desc`;
+    } else if (decoded.role == 2) {
+      //role instructor
+      q = `select h.timeUpdate as time, (c.price*95)/100 as amount from hSubmission h, class c where h.idClass=c.id and h.status=3 and h.idInstructor=${decoded.id}  order by 1 desc`;
+    } else {
+      //role admin
+      q = `select h.timeUpdate as time, (c.price*5)/100 as amount from hSubmission h, class c where h.idClass=c.id and h.status=3 order by 1 desc`;
+    }
+    console.log(q);
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 module.exports = router;
