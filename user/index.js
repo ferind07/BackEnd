@@ -662,10 +662,10 @@ router.post("/registerClass", (req, res) => {
 async function checkSubmission(idUser, idInstructor, dateStart, dateEnd) {
   const query = util.promisify(con.query).bind(con);
   const q =
-    `select * from submission where ` +
-    `('${dateStart}' between dateStart and dateEnd or ` +
-    `'${dateEnd}' between dateStart and dateEnd or ` +
-    `(dateStart >= '${dateStart}' and dateEnd <= '${dateEnd}')) and (idUser=${idUser} or idInstructor=${idInstructor}) and status != 3 and status != 2;`;
+    `select s.dateStart, s.dateEnd, c.title from submission s, class c where c.id=s.idClass and ` +
+    `('${dateStart}' between s.dateStart and s.dateEnd or ` +
+    `'${dateEnd}' between s.dateStart and s.dateEnd or ` +
+    `(s.dateStart >= '${dateStart}' and s.dateEnd <= '${dateEnd}')) and (s.idUser=${idUser} or s.idInstructor=${idInstructor}) and s.status != 3 and s.status != 2;`;
   const hasil = await query(q);
   return hasil;
 }
@@ -736,7 +736,7 @@ router.post("/submissionClass", async (req, res) => {
       res.send({
         status: false,
         msg: "Ada jadwal yang menumpuk",
-        data: intersecDate,
+        data: intersecDate[0],
       });
     }
   } catch (error) {
@@ -1118,7 +1118,7 @@ router.get("/getSchedule", (req, res) => {
       q =
         `select u.name, c.title, c.image, i.name as iName, h.timeInsert, h.status, h.id ` +
         `from hSubmission h, user u, instructor i, class c ` +
-        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and h.status != 5 and i.idUser = ${decoded.id}`;
+        `where u.id = h.idUser and i.idUser = h.idInstructor and c.id = h.idClass and h.status != 5 and i.idUser = ${decoded.id} order by h.timeInsert desc`;
     }
     //console.log(q);
     con.query(q, (err, rows) => {
@@ -1769,6 +1769,22 @@ router.get("/getIncome", (req, res) => {
       //role admin
       q = `select h.timeUpdate as time, (c.price*5)/100 as amount from hSubmission h, class c where h.idClass=c.id and h.status=3 order by 1 desc`;
     }
+    console.log(q);
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      res.send(rows);
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/userSchedule", (req, res) => {
+  const token = req.query.token;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const q = `select s.dateStart, s.dateEnd from submission s, hSubmission h where h.id=s.idHsubmission and s.idUser=${decoded.id} and s.status=1`;
     console.log(q);
     con.query(q, (err, rows) => {
       if (err) throw err;
