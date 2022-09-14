@@ -1795,4 +1795,54 @@ router.get("/userSchedule", (req, res) => {
   }
 });
 
+router.get("/userReview", (req, res) => {
+  const idTo = req.query.idUser;
+  const idHSubmission = req.query.idHSubmission;
+
+  const q = `select * from review where idTo=${idTo} and idHSubmission=${idHSubmission}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
+router.post("/placeUserReview", (req, res) => {
+  const token = req.body.token;
+  const idTo = req.body.idUser;
+  const rating = req.body.rating;
+  const comment = req.body.comment;
+  const idHSubmission = req.body.idHSubmission;
+
+  try {
+    var decoded = jwt.verify(token, "217116596");
+    const idFrom = decoded.id;
+
+    const q = `INSERT INTO review (id, idHSubmission, idTo, idFrom, rating, comment, createAt) VALUES (NULL, ${idHSubmission}, ${idTo}, ${idFrom}, ${rating}, '${comment}', current_timestamp())`;
+
+    con.query(q, (err, rows) => {
+      if (err) throw err;
+      if (rows.affectedRows == 1) {
+        res.send({
+          status: true,
+          msg: "Success place review to user",
+        });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/getUserReview", (req, res) => {
+  const idUser = req.query.idUser;
+
+  const q = `select * from review where idTo=${idUser}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+    res.send(rows);
+  });
+});
+
 module.exports = router;
