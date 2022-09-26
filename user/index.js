@@ -1837,7 +1837,7 @@ router.post("/placeUserReview", (req, res) => {
 router.get("/getUserReview", (req, res) => {
   const idUser = req.query.idUser;
 
-  const q = `select * from review where idTo=${idUser}`;
+  const q = `select * from review r, user u where u.id=r.idFrom and idTo=${idUser}`;
 
   con.query(q, (err, rows) => {
     if (err) throw err;
