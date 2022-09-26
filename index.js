@@ -26,11 +26,11 @@ const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 
 var CronJob = require("cron").CronJob;
-var job = new CronJob("* * * * *", function () {
-  endClassByDay();
-  console.log("run every day midnight");
-});
-job.start();
+// var job = new CronJob("* * * * *", function () {
+//   endClassByDay();
+//   console.log("run every day midnight");
+// });
+// job.start();
 
 function updateHsubmissionExpired() {
   const q = `update hSubmission set status=4 WHERE timeInsert < (NOW() - INTERVAL 1 DAY)`;
