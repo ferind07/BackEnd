@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const app = express();
 var jwt = require("jsonwebtoken");
+const util = require("util");
 //app.use(express.static(__dirname + '/public'))
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -24,18 +25,105 @@ app.get("/coba", (req, res) => {
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 
-// var CronJob = require("cron").CronJob;
-// var job = new CronJob("* * * * *", function () {
-//   updateHsubmissionExpired();
-//   console.log("run every 1 minute");
-// });
-// job.start();
+var CronJob = require("cron").CronJob;
+var job = new CronJob("* * * * *", function () {
+  endClassByDay();
+  console.log("run every day midnight");
+});
+job.start();
 
 function updateHsubmissionExpired() {
   const q = `update hSubmission set status=4 WHERE timeInsert < (NOW() - INTERVAL 1 DAY)`;
   con.query(q, (err, rows) => {
     if (err) console.log(err);
     console.log(rows);
+  });
+}
+
+async function endClassByDay() {
+  const qIdSubmission = `select * from submission where status=4 and dateEnd < now()`;
+
+  con.query(qIdSubmission, (err, rows) => {
+    if (err) throw err;
+    rows.forEach(async (element) => {
+      const idSubmission = element.id;
+
+      const query = util.promisify(con.query).bind(con);
+
+      const q = `update submission set status=2 where id=${idSubmission}`;
+
+      const updateSubmission = await query(q);
+
+      // const q2 = `select * from class submission where id=${idSubmission}`;
+      const q2 = `select * from submission where id=${idSubmission}`;
+
+      const dataSubmission = await query(q2);
+
+      // const q3 = `select * from class where id=${dataSubmission[0].idClass}`
+
+      // const dataClass = await query(q3);
+
+      // console.log(q2);
+      // console.log(dataSubmission);
+      const idHSubmission = dataSubmission[0].idHsubmission;
+      const idClass = dataSubmission[0].idClass;
+
+      // const checkClassDone = await checkClassDone(query, idClass, idHSubmission);
+      // const sendMoney = await sendMoney(query, idClass);
+      //finish class
+      //1. update status
+      //2. check class done
+      //3. send money
+
+      const q3 = `select * from class where id=${idClass}`;
+
+      const dataClass = await query(q3);
+
+      const classCount = dataClass[0].classCount;
+
+      const q4 = `select * from submission where idHsubmission=${idHSubmission} and status=2`;
+      const dataSubmissionDone = await query(q4);
+      console.log(q4);
+
+      if (dataSubmissionDone.length == classCount) {
+        console.log("kelas sudah selesai");
+
+        const q5 = `update hSubmission set status=3 where id=${idHSubmission}`;
+
+        const updateHSubmission = await query(q5);
+
+        const q6 = `update hSubmission set timeUpdate=now() where id=${idHSubmission}`;
+
+        const updateTimeUpdate = await query(q6);
+
+        const gaji = dataClass[0].price / dataClass[0].classCount;
+
+        const q7 = `select * from user where id=${dataClass[0].idInstructor}`;
+
+        const hasil2 = await query(q7);
+
+        const gajiInstructor = (gaji * 95) / 100;
+        const gajiAdmin = (gaji * 5) / 100;
+
+        const saldo = hasil2[0].saldo + gajiInstructor;
+
+        const q8 = `update user set saldo=${saldo} where id=${dataClass[0].idInstructor}`;
+
+        // const queryGajiAdmin = await sendMoneyToAdmin(query, gajiAdmin);
+
+        const hasil3 = await query(q8);
+
+        const q9 = `select * from user where role=3`;
+        const dataAdmin = await query(q9);
+
+        const saldoBaru = dataAdmin[0].saldo + gajiAdmin;
+
+        const q10 = `update user set saldo=${saldoBaru} where role=3`;
+        const updateSaldo = await query(q10);
+
+        res.send(updateSaldo);
+      }
+    });
   });
 }
 

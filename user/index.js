@@ -591,7 +591,7 @@ router.get("/getClassList", (req, res) => {
     try {
       var decoded = jwt.verify(token, "217116596");
       if (decoded.role == 2) {
-        const q = `select * from class where idInstructor=${decoded.id}`;
+        const q = `select * from class where idInstructor=${decoded.id} and status != 0`;
         con.query(q, (err, rows) => {
           if (err) throw err;
           res.send({
@@ -613,7 +613,7 @@ router.get("/getClassList", (req, res) => {
     //tidak ada token
     //berguna untuk load class oleh user
     const idInstructor = req.query.idInstructor;
-    const q = `select * from class where idInstructor=${idInstructor}`;
+    const q = `select * from class where idInstructor=${idInstructor} and status != 0`;
     con.query(q, (err, rows) => {
       if (err) throw err;
       res.send({
@@ -1842,6 +1842,23 @@ router.get("/getUserReview", (req, res) => {
   con.query(q, (err, rows) => {
     if (err) throw err;
     res.send(rows);
+  });
+});
+
+router.post("/insEndClass", (req, res) => {
+  const idSubmission = req.body.idSubmission;
+
+  const q = `update submission set status=4 where id=${idSubmission}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+
+    if (rows.affectedRows == 1) {
+      res.send({
+        status: true,
+        msg: "Success end Class",
+      });
+    }
   });
 });
 
