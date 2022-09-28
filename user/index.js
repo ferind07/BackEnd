@@ -996,7 +996,11 @@ router.post("/finishClass", async (req, res) => {
     const q10 = `update user set saldo=${saldoBaru} where role=3`;
     const updateSaldo = await query(q10);
 
-    res.send(updateSaldo);
+    res.send({
+      status: true,
+      msg: "Success finish this class",
+      saldo: updateSaldo,
+    });
   } else {
     res.send({
       status: true,
