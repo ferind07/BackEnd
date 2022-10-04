@@ -196,9 +196,11 @@ router.post("/forgetPassword", async (req, res) => {
 
   //console.log(valid);
   if (hasil1.length > 0) {
+    //console.log("asdsa");
     const newPass = Math.floor(100000 + Math.random() * 900000);
-
-    const hash = SHA256(newPass).toString();
+    //console.log(newPass);
+    const hash = SHA256(newPass + "").toString();
+    //console.log(hash);
     const q = `update user set password='${hash}' where email='${email}'`;
 
     con.query(q, (err, rows) => {
