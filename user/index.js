@@ -176,22 +176,30 @@ async function sendEmailRegister(email, res, id) {
   });
 }
 
-router.post("/forgetPassword", (req, res) => {
+router.post("/forgetPassword", async (req, res) => {
   const email = req.body.email;
 
   const qq = `select * from user where email='${email}'`;
-  let valid = false;
-  con.query(qq, (err, rows) => {
-    if (rows.length > 0) {
-      valid = true;
-    }
-  });
+  console.log(qq);
+  var valid = false;
+  // con.query(qq, (err, rows) => {
+  //   //console.log(rows.length);
+  //   if (rows.length > 0) {
+  //     valid = true;
+  //     console.log(valid);
+  //   }
+  // });
 
-  if (valid) {
+  const query = util.promisify(con.query).bind(con);
+
+  const hasil1 = await query(qq);
+
+  //console.log(valid);
+  if (hasil1.length > 0) {
     const newPass = Math.floor(100000 + Math.random() * 900000);
 
     const hash = SHA256(newPass).toString();
-    const q = `upadate user set password='${hash}' where email='${email}'`;
+    const q = `update user set password='${hash}' where email='${email}'`;
 
     con.query(q, (err, rows) => {
       if (err) throw err;
