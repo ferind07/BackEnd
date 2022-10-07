@@ -1574,9 +1574,13 @@ router.post("/changePassword", (req, res) => {
     con.query(q, (err, rows) => {
       if (err) throw err;
       const password = rows[0].password;
-      const currPassword = SHA256(currentPassword).toString();
+      console.log(password);
+      const currPassword = SHA256(currentPassword + "").toString();
+      console.log(currentPassword);
+      const newPass = SHA256(newPassword + "").toString();
       if (password == currPassword) {
-        const q2 = `update user set password=${newPassword} where id=${decoded.id}`;
+        const q2 = `update user set password='${newPass}' where id=${decoded.id}`;
+        console.log(q2);
         con.query(q2, (err2, rows2) => {
           if (err2) throw err2;
           if (rows2.affectedRows == 1) {
