@@ -176,22 +176,32 @@ async function sendEmailRegister(email, res, id) {
   });
 }
 
-router.post("/forgetPassword", (req, res) => {
+router.post("/forgetPassword", async (req, res) => {
   const email = req.body.email;
 
   const qq = `select * from user where email='${email}'`;
-  let valid = false;
-  con.query(qq, (err, rows) => {
-    if (rows.length > 0) {
-      valid = true;
-    }
-  });
+  console.log(qq);
+  var valid = false;
+  // con.query(qq, (err, rows) => {
+  //   //console.log(rows.length);
+  //   if (rows.length > 0) {
+  //     valid = true;
+  //     console.log(valid);
+  //   }
+  // });
 
-  if (valid) {
+  const query = util.promisify(con.query).bind(con);
+
+  const hasil1 = await query(qq);
+
+  //console.log(valid);
+  if (hasil1.length > 0) {
+    //console.log("asdsa");
     const newPass = Math.floor(100000 + Math.random() * 900000);
-
-    const hash = SHA256(newPass).toString();
-    const q = `upadate user set password='${hash}' where email='${email}'`;
+    //console.log(newPass);
+    const hash = SHA256(newPass + "").toString();
+    //console.log(hash);
+    const q = `update user set password='${hash}' where email='${email}'`;
 
     con.query(q, (err, rows) => {
       if (err) throw err;
@@ -591,7 +601,7 @@ router.get("/getClassList", (req, res) => {
     try {
       var decoded = jwt.verify(token, "217116596");
       if (decoded.role == 2) {
-        const q = `select * from class where idInstructor=${decoded.id}`;
+        const q = `select * from class where idInstructor=${decoded.id} and status != 0`;
         con.query(q, (err, rows) => {
           if (err) throw err;
           res.send({
@@ -613,7 +623,7 @@ router.get("/getClassList", (req, res) => {
     //tidak ada token
     //berguna untuk load class oleh user
     const idInstructor = req.query.idInstructor;
-    const q = `select * from class where idInstructor=${idInstructor}`;
+    const q = `select * from class where idInstructor=${idInstructor} and status != 0`;
     con.query(q, (err, rows) => {
       if (err) throw err;
       res.send({
@@ -996,7 +1006,11 @@ router.post("/finishClass", async (req, res) => {
     const q10 = `update user set saldo=${saldoBaru} where role=3`;
     const updateSaldo = await query(q10);
 
-    res.send(updateSaldo);
+    res.send({
+      status: true,
+      msg: "Success finish this class",
+      saldo: updateSaldo,
+    });
   } else {
     res.send({
       status: true,
@@ -1846,6 +1860,23 @@ router.get("/getUserReview", (req, res) => {
   con.query(q, (err, rows) => {
     if (err) throw err;
     res.send(rows);
+  });
+});
+
+router.post("/insEndClass", (req, res) => {
+  const idSubmission = req.body.idSubmission;
+
+  const q = `update submission set status=4 where id=${idSubmission}`;
+
+  con.query(q, (err, rows) => {
+    if (err) throw err;
+
+    if (rows.affectedRows == 1) {
+      res.send({
+        status: true,
+        msg: "Success end Class",
+      });
+    }
   });
 });
 
