@@ -408,30 +408,6 @@ io.on("connection", (socket) => {
     io.to(data.to).emit("partnerShareScreenError");
   });
 
-  socket.on("offer", (payload) => {
-    io.to(payload.target).emit("offer", payload);
-  });
-
-  socket.on("answer", (payload) => {
-    io.to(payload.target.emit("answer", payload));
-  });
-
-  socket.on("ice-candidate", (incoming) => {
-    io.to(payload.target.emit("ice-candidate", incoming));
-  });
-
-  socket.on("answerShareScreen", (payload) => {
-    console.log("answer share screen to " + payload.to);
-    console.log(payload.peerJSid);
-    io.to(payload.to).emit("answerShareScreen", { peerJSid: payload.peerJSid });
-  });
-  socket.on("callShareScreen", (payload) => {
-    io.to(payload.to).emit("callShareScreen", {
-      from: payload.to,
-      peerJSid: payload.peerJSid,
-    });
-  });
-
   socket.on("peerDestroy", (payload) => {
     io.to(payload.to).emit("peerDestroy");
   });
