@@ -26,17 +26,50 @@ const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 
 var CronJob = require("cron").CronJob;
-// var job = new CronJob("* * * * *", function () {
-//   endClassByDay();
-//   console.log("run every day midnight");
-// });
-// job.start();
+var job = new CronJob("10 * * * *", function () {
+  //endClassByDay();
+  hSubmissionExpired();
+  console.log("run every day midnight");
+});
+job.start();
 
 function updateHsubmissionExpired() {
   const q = `update hSubmission set status=4 WHERE timeInsert < (NOW() - INTERVAL 1 DAY)`;
   con.query(q, (err, rows) => {
     if (err) console.log(err);
     console.log(rows);
+  });
+}
+
+async function hSubmissionExpired() {
+  const qIdhSubmission = `select * from hSubmission where status=0 and timeInsert > (NOW() + INTERVAL 1 DAY)`;
+
+  con.query(qIdhSubmission, (err, rows) => {
+    if (err) throw err;
+    rows.forEach(async (element) => {
+      const idHSubmission = element.id;
+
+      let q = `update hSubmission set status=2 where id=${idHSubmission}`;
+      const query = util.promisify(con.query).bind(con);
+      let hasil = await query(q);
+      console.log(hasil);
+
+      if (hasil.affectedRows == 1) {
+        let q2 = `update submission set status=2 where idHsubmission=${idHSubmission}`;
+        const query2 = util.promisify(con.query).bind(con);
+        let hasil2 = await query2(q2);
+        //console.log(hasil2);
+        const qUser = `select * from user where id=${element.idUser}`;
+        const userData = await query(qUser);
+
+        const qClass = `select * from class where id=${element.idClass}`;
+        const classData = await query(qClass);
+
+        const newSaldo = userData[0].saldo + classData[0].price;
+        const qKembali = `update user set saldo=${newSaldo} where id=${element.idUser}`;
+        const hasilKembaliUangUser = await query(qKembali);
+      }
+    });
   });
 }
 
@@ -344,10 +377,6 @@ io.on("connection", (socket) => {
     // console.log(room);
     // console.log(socketToRoom);
     const roomID = socketToRoom[socket.id];
-    // console.log(roomID);
-    // console.log(users);
-    // const roomID = socketToRoom[socket.id];
-    // let room = users[roomID];
 
     if (room[roomID]) {
       var data = room[roomID].socketID.filter((id) => id !== socket.id);
@@ -356,11 +385,6 @@ io.on("connection", (socket) => {
     console.log("room id");
     console.log(room[roomID]);
     console.log(socket.id);
-
-    // if (room) {
-    //   room = room.filter((id) => id !== socket.id);
-    //   users[roomID] = room;
-    // }
 
     socket.broadcast.emit("user left", socket.id);
 
