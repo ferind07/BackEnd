@@ -1785,7 +1785,7 @@ router.get("/getIncome", (req, res) => {
     var q = "";
     if (decoded.role == 1) {
       //role user
-      q = `select h.timeUpdate as time, c.price as amount from hSubmission h, class c where h.idClass=c.id and h.status=7 and h.idUser=${decoded.id} order by 1 desc`;
+      q = `select h.timeUpdate as time, c.price as amount from hSubmission h, class c where h.idClass=c.id and (h.status=7 or h.status=2) and h.idUser=${decoded.id} order by 1 desc`;
     } else if (decoded.role == 2) {
       //role instructor
       q = `select h.timeUpdate as time, (c.price*95)/100 as amount from hSubmission h, class c where h.idClass=c.id and h.status=3 and h.idInstructor=${decoded.id}  order by 1 desc`;
