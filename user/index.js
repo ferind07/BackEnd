@@ -745,7 +745,7 @@ router.post("/submissionClass", async (req, res) => {
     } else {
       res.send({
         status: false,
-        msg: "Ada jadwal yang menumpuk",
+        msg: "Intersec schedule",
         data: intersecDate[0],
       });
     }
