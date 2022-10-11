@@ -1640,7 +1640,13 @@ router.post("/invoicesPaid", (req, res) => {
     con.query(qUpdateHSubmission, (err, rows) => {
       if (err) throw err;
 
-      res.send(rows);
+      const qUpdateSubmission = `update submission set status=1 where idHsubmission=${external_idArr[1]}`;
+
+      con.query(qUpdateSubmission, (err2, rows2) => {
+        if (err2) throw err2;
+
+        res.send(rows2);
+      });
     });
   } else if (status == "EXPIRED") {
     const qUpdateHSubmission = `update hSubmission set status=4 where id=${external_idArr[1]}`;
