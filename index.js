@@ -1,16 +1,15 @@
 const express = require("express");
 const http = require("http");
 const app = express();
+const cors = require("cors");
 const server = http.createServer(app);
 const socket = require("socket.io");
 const io = socket(server);
-var cors = require("cors");
-
-app.use(cors());
 
 const users = {};
 
 const socketToRoom = {};
+app.use(cors());
 
 app.get("/getListUser", (req, res) => {
   const roomID = req.query.roomID;
@@ -20,6 +19,7 @@ app.get("/getListUser", (req, res) => {
 io.on("connection", (socket) => {
   socket.emit("yourID", socket.id);
   socket.on("join room", (roomID) => {
+    //console.log(roomID);
     if (users[roomID]) {
       const length = users[roomID].length;
       if (length === 4) {
@@ -27,6 +27,7 @@ io.on("connection", (socket) => {
         return;
       }
       users[roomID].push(socket.id);
+      console.log(users[roomID]);
     } else {
       users[roomID] = [socket.id];
     }
@@ -34,6 +35,12 @@ io.on("connection", (socket) => {
     const usersInThisRoom = users[roomID].filter((id) => id !== socket.id);
 
     socket.emit("all users", usersInThisRoom);
+  });
+
+  socket.on("user in the room", (roomID) => {
+    const usersInThisRoom = users[roomID].filter((id) => id !== socket.id);
+
+    socket.emit("list user in the room", usersInThisRoom);
   });
 
   socket.on("sending signal", (payload) => {
@@ -50,13 +57,15 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("share screen", (payload) => {
-    const to = payload.to;
-    const from = payload.from;
+  socket.on("sending share screen signal", (payload) => {
+    const to = payload.userToSignal;
+    const from = payload.callerID;
     const signal = payload.signal;
 
-    io.to(to).emit("recive share screen", {
-      from: from,
+    console.log("sending share screen signal from " + from + " to " + to);
+
+    io.to(to).emit("recive share screen signal", {
+      callerID: from,
       signal: signal,
     });
   });
@@ -65,7 +74,34 @@ io.on("connection", (socket) => {
     const signal = payload.signal;
     const to = payload.to;
 
+    console.log("return share screen signal from " + socket.id + " to " + to);
+
     io.to(to).emit("receiving returned share screen signal", {
+      signal: signal,
+      id: socket.id,
+    });
+  });
+
+  socket.on("sending share screen signal2", (payload) => {
+    const to = payload.userToSignal;
+    const from = payload.callerID;
+    const signal = payload.signal;
+
+    console.log("sending share screen signal from " + from + " to " + to);
+
+    io.to(to).emit("recive share screen signal2", {
+      callerID: from,
+      signal: signal,
+    });
+  });
+
+  socket.on("return share screen signal2", (payload) => {
+    const signal = payload.signal;
+    const to = payload.to;
+
+    console.log("return share screen signal from " + socket.id + " to " + to);
+
+    io.to(to).emit("receiving returned share screen signal2", {
       signal: signal,
       id: socket.id,
     });
@@ -77,7 +113,10 @@ io.on("connection", (socket) => {
     if (room) {
       room = room.filter((id) => id !== socket.id);
       users[roomID] = room;
+      console.log(users[roomID]);
     }
+    socket.broadcast.emit("user left", socket.id);
+    console.log("disconnect");
   });
 });
 
