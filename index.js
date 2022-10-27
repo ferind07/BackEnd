@@ -6,10 +6,16 @@ const server = http.createServer(app);
 const socket = require("socket.io");
 const io = socket(server);
 
+var userRoutes = require("./user/index");
+var adminRoutes = require("./admin/index");
+
+app.use(cors());
+app.use("/user", userRoutes);
+app.use("/admin", adminRoutes);
+
 const users = {};
 
 const socketToRoom = {};
-app.use(cors());
 
 app.get("/getListUser", (req, res) => {
   const roomID = req.query.roomID;
