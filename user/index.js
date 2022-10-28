@@ -235,7 +235,7 @@ async function usePooledConnectionAsync(actionAsync) {
   }
 }
 
-router.get("/semuaUser", async (req, res) => {
+router.get("/listUser", async (req, res) => {
   const q = `select * from user`;
 
   con.query(q, (err, rows) => {
