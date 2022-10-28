@@ -4,12 +4,16 @@ const app = express();
 const cors = require("cors");
 const server = http.createServer(app);
 const socket = require("socket.io");
+const bodyParser = require("body-parser");
 const io = socket(server);
 
 var userRoutes = require("./user/index");
 var adminRoutes = require("./admin/index");
 
 app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
 app.use("/user", userRoutes);
 app.use("/admin", adminRoutes);
 
